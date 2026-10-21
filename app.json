@@ -37,11 +37,20 @@
       [
         "expo-notifications",
         {
+          "icon": "./assets/notification-icon.png",
           "color": "#6A0C1F",
           "enableRemoteNotifications": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#F6F1E7",
+          "imageWidth": 160
+        }
+      ]
     ],
     "scheme": "mynotes",
     "experiments": {
