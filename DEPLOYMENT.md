@@ -35,12 +35,22 @@ Build numbers (`versionCode` / `buildNumber`) increase automatically. That's han
 
 ### 0.3 App icon and splash
 
-Replace the placeholder images in `assets/`:
+All icons are generated from one source drawing, [assets/icon-source.svg](assets/icon-source.svg) (burgundy note on cream). After changing the SVG or the colours in [scripts/generate-icons.mjs](scripts/generate-icons.mjs), regenerate them:
 
-- `assets/icon.png`: **1024×1024 PNG with no transparency** (Apple rejects icons with transparency)
-- `assets/android-icon-foreground.png`, `android-icon-background.png`, `android-icon-monochrome.png`: Android adaptive icon layers, 1024×1024. Keep the artwork inside the centre ~66%.
+```bash
+npm run icons
+```
 
-Tools: Figma, or https://www.appicon.co to preview.
+It writes:
+
+- `assets/icon.png`: iOS/App Store icon, 1024×1024, no alpha channel (Apple rejects transparency)
+- `assets/android-icon-foreground.png`, `android-icon-background.png`, `android-icon-monochrome.png`: Android adaptive and themed icon layers, with the artwork inside the safe zone
+- `assets/notification-icon.png`: white status-bar icon for reminders on Android
+- `assets/splash-icon.png`: splash logo, shown on the cream splash background
+- `assets/favicon.png`: web favicon
+- `assets/store/play-store-icon-512.png`: upload this as the **App icon** in the Play Console store listing
+
+> **Icon licence:** the drawing comes from the Noun Project ("Note" by iconisme). Using it without the credit line in a store app needs a paid licence (Noun Pro or a one-off icon purchase). Make sure you have one before publishing.
 
 ### 0.4 Privacy policy URL (both stores require one)
 
@@ -118,7 +128,7 @@ eas build --platform android --profile production
 ### A4. Store listing (Grow → Store presence → Main store listing)
 
 - **App name** (≤30 chars), **Short description** (≤80), **Full description** (≤4000)
-- **App icon** 512×512 PNG
+- **App icon** 512×512 PNG: use `assets/store/play-store-icon-512.png`
 - **Feature graphic** 1024×500
 - **Phone screenshots**: at least 2 (up to 8), 16:9 or 9:16, min 320px. Take them from the preview build: Home, Notes, Note editor with colours, Finance, Tasks/Agenda.
 - **Category**: Productivity. **Contact email** is required.
@@ -270,13 +280,42 @@ For JavaScript/UI-only fixes (no new native packages), `eas update` can push cha
 
 ---
 
+## Part D — End-to-end tests on real phone builds
+
+[.maestro/](.maestro/) holds Maestro flows that drive the real app on a phone: notes, finance, tasks, plus the phone's own navigation (iOS edge-swipe back, Android back button, back cancelling a multi-select, keyboard covering Save, backgrounding the app). They use a separate `e2e-test` build profile (iOS simulator build + Android APK, no signing needed).
+
+**Run them in the cloud (no Xcode or Android Studio needed):**
+
+```bash
+npx eas-cli@latest workflow:run .eas/workflows/e2e-android.yml
+```
+
+```bash
+npx eas-cli@latest workflow:run .eas/workflows/e2e-ios.yml
+```
+
+Each builds the app, boots an emulator/simulator on EAS, runs all four flows and shows pass/fail with screenshots in the expo.dev dashboard.
+
+**Or locally** on a connected phone, emulator or simulator with the `e2e-test` build installed:
+
+```bash
+curl -fsSL "https://get.maestro.mobile.dev" | bash
+```
+
+```bash
+maestro test .maestro/
+```
+
+Run them before every store submission.
+
 ## Pre-launch checklist
 
 - [ ] Final `bundleIdentifier` / `package` set in `app.json`
-- [ ] Real icons and splash in `assets/`
+- [ ] Icons generated (`npm run icons`) and the Noun Project icon licence purchased
 - [ ] Privacy policy filled in and hosted publicly
 - [ ] Tested on a real Android phone (preview APK) and iPhone (TestFlight)
-- [ ] Reminder notification fires on both platforms
+- [ ] Reminder notification fires on both platforms, and tapping it opens the task
+- [ ] Maestro E2E flows pass on Android and iOS (Part D)
 - [ ] Screenshots captured (phone, plus iPad if `supportsTablet` is true)
 - [ ] Play: Data safety = no data collected; content rating, target audience and financial features done
 - [ ] Play: 14-day closed test with 12+ testers finished (new personal accounts)
