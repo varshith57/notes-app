@@ -39,3 +39,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Store credentials
+*service-account*.json
+*.p8
+*.p12
+*.jks
+*.keystore
