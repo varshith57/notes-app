@@ -1,0 +1,8 @@
+# Clean install state with notifications allowed, landing on Home.
+appId: com.varshith.mynotes
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+- assertVisible: 'My Space'

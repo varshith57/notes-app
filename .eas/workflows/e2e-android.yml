@@ -1,0 +1,21 @@
+# Builds the app for an Android emulator and runs the Maestro flows in .maestro/
+# on EAS's cloud devices. Run manually: npx eas-cli@latest workflow:run .eas/workflows/e2e-android.yml
+name: e2e-android
+
+jobs:
+  build_android:
+    type: build
+    params:
+      platform: android
+      profile: e2e-test
+
+  maestro_test:
+    needs: [build_android]
+    type: maestro
+    params:
+      build_id: ${{ needs.build_android.outputs.build_id }}
+      flow_path:
+        - .maestro/01_notes.yaml
+        - .maestro/02_finance.yaml
+        - .maestro/03_tasks.yaml
+        - .maestro/04_navigation.yaml

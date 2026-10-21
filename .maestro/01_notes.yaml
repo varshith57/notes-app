@@ -1,0 +1,44 @@
+# Notes: create (autosave), colour, reopen, back gesture, hold-to-select, bulk delete.
+appId: com.varshith.mynotes
+name: Notes
+---
+- runFlow: subflows/fresh_launch.yaml
+- tapOn: 'Notes'
+- assertVisible: 'Your thoughts live here'
+
+# Create a note and leave with the phone's back gesture — it must autosave.
+- tapOn: 'New note'
+- tapOn: 'Title'
+- inputText: 'Maestro note'
+- tapOn: 'Start writing…'
+- inputText: 'Written on a real device. No length limit.'
+- hideKeyboard
+- tapOn: 'Burgundy colour'
+- runFlow: subflows/go_back.yaml
+- assertVisible: 'Maestro note'
+- assertVisible: '1 note'
+
+# Reopen: content survived.
+- tapOn: 'Maestro note'
+- assertVisible: 'Written on a real device.*'
+- runFlow: subflows/go_back.yaml
+- assertVisible: 'Maestro note'
+
+# A blank note is discarded when you leave it.
+- tapOn: 'New note'
+- runFlow: subflows/go_back.yaml
+- assertVisible: '1 note'
+
+# Double tap opens only one editor; one back returns to the list.
+- doubleTapOn: 'Maestro note'
+- runFlow: subflows/go_back.yaml
+- assertVisible: 'My Notes'
+
+# Hold 3s to select, then bulk delete.
+- longPressOn: 'Maestro note'
+- assertVisible: '1 selected'
+- tapOn: 'Delete 1 selected'
+- assertVisible: 'Delete this note?'
+- tapOn: 'Delete'
+- assertNotVisible: 'Maestro note'
+- assertVisible: 'Your thoughts live here'

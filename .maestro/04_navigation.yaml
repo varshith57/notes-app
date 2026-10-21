@@ -1,0 +1,69 @@
+# Phone navigation: tab bar, back from tabs, back cancels selection (Android),
+# keyboard doesn't hide the Save button, app survives being backgrounded.
+appId: com.varshith.mynotes
+name: Navigation & gestures
+---
+- runFlow: subflows/fresh_launch.yaml
+
+# Home shortcuts and tiles.
+- tapOn: 'Agenda'
+- assertVisible: 'Tasks'
+- tapOn: 'Home'
+- tapOn: 'New Note'
+- assertVisible: 'Start writing…'
+- runFlow: subflows/go_back.yaml
+- assertVisible: 'My Space'
+
+# Android: back from another tab returns Home rather than closing the app.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn: 'Finance'
+      - assertVisible: 'Finances'
+      - back
+      - assertVisible: 'My Space'
+
+# Android: back while selecting cancels the selection and stays on the screen.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn: 'Notes'
+      - tapOn: 'New note'
+      - tapOn: 'Title'
+      - inputText: 'Select me'
+      - hideKeyboard
+      - back
+      - longPressOn: 'Select me'
+      - assertVisible: '1 selected'
+      - back
+      - assertNotVisible: '1 selected'
+      - assertVisible: 'My Notes'
+      - longPressOn: 'Select me'
+      - tapOn: 'Delete 1 selected'
+      - tapOn: 'Delete'
+
+# Keyboard open: the Save button stays reachable above it.
+- tapOn: 'Finance'
+- tapOn: 'Add financial note'
+- tapOn: 'Optional details'
+- inputText: 'Typing with the keyboard open'
+- assertVisible: 'Save entry'
+- hideKeyboard
+- runFlow: subflows/go_back.yaml
+- runFlow:
+    when:
+      visible: 'Discard changes\?'
+    commands:
+      - tapOn: 'Discard'
+
+# Background and return: state is kept.
+- tapOn: 'Notes'
+- tapOn: 'New note'
+- tapOn: 'Title'
+- inputText: 'Survives backgrounding'
+- hideKeyboard
+- pressKey: Home
+- launchApp
+- assertVisible: 'Survives backgrounding'

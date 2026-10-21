@@ -1,0 +1,67 @@
+# Tasks: to-do (validation, done toggle, update), reminder, agenda, bulk delete.
+appId: com.varshith.mynotes
+name: Tasks
+---
+- runFlow: subflows/fresh_launch.yaml
+- tapOn: 'Tasks'
+- assertVisible: 'All clear'
+
+# To-do with validation.
+- tapOn: 'Add task'
+- tapOn: 'Save'
+- assertVisible: 'Add a title'
+- tapOn: 'OK'
+- tapOn: 'What needs doing\?'
+- inputText: 'Maestro todo'
+- hideKeyboard
+- tapOn: 'High'
+- tapOn: 'Save'
+- assertVisible: 'Maestro todo'
+
+# Tick it off and back on.
+- tapOn: 'Mark "Maestro todo" done'
+- assertVisible: 'Mark "Maestro todo" not done'
+- tapOn: 'Mark "Maestro todo" not done'
+
+# Update.
+- tapOn: 'Maestro todo'
+- tapOn: 'Maestro todo'
+- eraseText
+- inputText: 'Maestro todo edited'
+- hideKeyboard
+- tapOn: 'Update'
+- assertVisible: 'Maestro todo edited'
+
+# Reminder (notification permission granted at launch).
+- tapOn: 'Reminders'
+- tapOn: 'Add task'
+- tapOn: 'Remind me to…'
+- inputText: 'Maestro reminder'
+- hideKeyboard
+- tapOn: 'Save'
+- assertVisible: 'Maestro reminder'
+
+# Agenda on today.
+- tapOn: 'Agenda'
+- tapOn: 'Add task'
+- tapOn: 'What’s planned\?'
+- inputText: 'Maestro agenda'
+- hideKeyboard
+- tapOn: 'Save'
+- assertVisible: 'Maestro agenda'
+
+# Bulk delete in each view.
+- longPressOn: 'Maestro agenda'
+- tapOn: 'Delete 1 selected'
+- tapOn: 'Delete'
+- assertNotVisible: 'Maestro agenda'
+- tapOn: 'Reminders'
+- longPressOn: 'Maestro reminder'
+- tapOn: 'Delete 1 selected'
+- tapOn: 'Delete'
+- assertNotVisible: 'Maestro reminder'
+- tapOn: 'To-do'
+- longPressOn: 'Maestro todo edited'
+- tapOn: 'Delete 1 selected'
+- tapOn: 'Delete'
+- assertVisible: 'All clear'

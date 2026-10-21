@@ -1,0 +1,105 @@
+# Finance: validation, add, edit/update, custom subcategory, unsaved-changes guard,
+# bulk delete.
+appId: com.varshith.mynotes
+name: Finance
+---
+- runFlow: subflows/fresh_launch.yaml
+- tapOn: 'Finance'
+- assertVisible: 'Finances'
+
+# Validation message instead of a silent no-op.
+- tapOn: 'Add financial note'
+- tapOn: 'Save entry'
+- assertVisible: 'Enter an amount'
+- tapOn: 'OK'
+
+# Add an expense; whole amounts show without decimals.
+- tapOn: '0'
+- inputText: '500'
+- hideKeyboard
+- tapOn: 'Food & Dining'
+- tapOn: 'Groceries'
+- tapOn: 'Save entry'
+- assertVisible: 'Groceries'
+- assertVisible: '.*500'
+- assertNotVisible: '.*500\.00'
+
+# Edit and update.
+- tapOn: 'Groceries'
+- assertVisible: 'Update entry'
+- tapOn: '500'
+- eraseText
+- inputText: '750'
+- hideKeyboard
+- tapOn: 'Update entry'
+- assertVisible: '.*750'
+
+# Custom subcategory.
+- tapOn: 'Add financial note'
+- tapOn: 'Income'
+- tapOn: '0'
+- inputText: '2500.50'
+- hideKeyboard
+- tapOn: 'Freelance'
+- tapOn: '\+ Custom'
+- inputText: 'Logo design'
+- tapOn: 'Add subcategory'
+- assertVisible: 'Logo design'
+- tapOn: 'Save entry'
+- assertVisible: '.*2,500\.50'
+
+# Unsaved changes: leaving via the phone's back asks first; Cancel keeps the edit open.
+- tapOn: 'Groceries'
+- tapOn: '750'
+- inputText: '1'
+- hideKeyboard
+- runFlow: subflows/go_back.yaml
+# iOS may block the swipe outright instead of asking; either way the edit must survive.
+- runFlow:
+    when:
+      visible: 'Discard changes\?'
+    commands:
+      - tapOn: 'Cancel'
+- assertVisible: 'Update entry'
+- runFlow: subflows/go_back.yaml
+- runFlow:
+    when:
+      visible: 'Discard changes\?'
+    commands:
+      - tapOn: 'Discard'
+# iOS fallback if the swipe was blocked: use the header back button.
+- runFlow:
+    when:
+      visible: 'Update entry'
+    commands:
+      - tapOn: 'Back'
+      - tapOn: 'Discard'
+- assertVisible: 'Finances'
+- assertVisible: '.*750'
+
+# Summarize by Quarter / Year / Custom, then back to Month.
+- tapOn: 'Summarize by Month'
+- assertVisible: 'SUMMARIZE BY'
+- tapOn: 'Quarter'
+- assertVisible: 'Q\d \d{4} · .*'
+- assertVisible: 'Groceries'
+- tapOn: 'Summarize by Quarter'
+- tapOn: 'Year'
+- assertVisible: 'Groceries'
+- tapOn: 'Summarize by Year'
+- tapOn: 'Custom'
+- assertVisible: 'FROM'
+- assertVisible: 'TO'
+- assertVisible: 'Groceries'
+- tapOn: 'Summarize by Custom'
+- tapOn: 'Month'
+
+# Hold to select, add a second row, select all, bulk delete.
+- longPressOn: 'Groceries'
+- assertVisible: '1 selected'
+- tapOn: 'Select all'
+- assertVisible: '2 selected'
+- tapOn: 'Delete 2 selected'
+- assertVisible: 'Delete 2 entries\?'
+- tapOn: 'Delete'
+- assertNotVisible: 'Groceries'
