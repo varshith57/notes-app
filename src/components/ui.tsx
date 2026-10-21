@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, gradient, radius } from '@/lib/theme';
+import { colors, gradient, progressGradient, radius } from '@/lib/theme';
 
 type IconName = keyof typeof Feather.glyphMap;
 
@@ -46,11 +46,11 @@ export function IconButton({
       hitSlop={6}
       style={({ pressed }) => [
         styles.iconButton,
-        active && { backgroundColor: colors.navy, borderColor: colors.navy },
+        active && { backgroundColor: colors.chrome, borderColor: colors.chrome },
         pressed && { opacity: 0.6 },
       ]}
     >
-      <Feather name={icon} size={20} color={active ? '#fff' : colors.text} />
+      <Feather name={icon} size={20} color={active ? colors.onPrimary : colors.text} />
     </Pressable>
   );
 }
@@ -80,7 +80,7 @@ export function Chip({
       ]}
     >
       {!!icon && <Text style={{ fontSize: 14 }}>{icon}</Text>}
-      <Text style={[styles.chipText, selected && { color: '#fff' }]}>{label}</Text>
+      <Text style={[styles.chipText, selected && { color: colors.onPrimary }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -120,7 +120,7 @@ export function GradientProgress({ value }: { value: number }) {
   return (
     <View style={styles.progressTrack}>
       <LinearGradient
-        colors={gradient}
+        colors={progressGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[styles.progressFill, { width: `${pct * 100}%` }]}
@@ -137,12 +137,12 @@ export function Fab({ onPress, label, bottom }: { onPress: () => void; label: st
       style={({ pressed }) => [styles.fab, { bottom }, pressed && { transform: [{ scale: 0.95 }] }]}
     >
       <LinearGradient
-        colors={[colors.lavender, colors.primary]}
+        colors={gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.fabInner}
       >
-        <Feather name="plus" size={26} color="#fff" />
+        <Feather name="plus" size={26} color={colors.onPrimary} />
       </LinearGradient>
     </Pressable>
   );
@@ -206,20 +206,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  segmentSelected: { borderColor: colors.lavender, backgroundColor: '#F7F2FF' },
+  segmentSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   segmentText: { fontSize: 14, fontWeight: '600', color: colors.muted },
   progressTrack: {
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
     overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 5 },
   fab: {
     position: 'absolute',
     right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
@@ -236,7 +240,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: '#F2ECFF',
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,

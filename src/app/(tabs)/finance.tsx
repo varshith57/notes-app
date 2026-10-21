@@ -70,7 +70,7 @@ export default function FinanceScreen() {
             </View>
 
             <LinearGradient
-              colors={['#2A1260', colors.navy]}
+              colors={['#2A2224', colors.chrome]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.hero}
@@ -81,8 +81,8 @@ export default function FinanceScreen() {
                 {formatMoney(Math.abs(net))}
               </Text>
               <View style={styles.heroStats}>
-                <HeroStat icon="arrow-down-left" label="Income" value={summary.incomeCents} tint="#7EE2A8" />
-                <HeroStat icon="arrow-up-right" label="Expense" value={summary.expenseCents} tint="#FF9DA0" />
+                <HeroStat icon="arrow-down-left" label="Income" value={summary.incomeCents} tint="#8FD3A9" />
+                <HeroStat icon="arrow-up-right" label="Expense" value={summary.expenseCents} tint="#F2A097" />
               </View>
             </LinearGradient>
 
@@ -162,7 +162,7 @@ function HeroStat({
 }) {
   return (
     <View style={styles.heroStat}>
-      <View style={[styles.heroIcon, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+      <View style={[styles.heroIcon, { backgroundColor: 'rgba(246,241,231,0.1)' }]}>
         <Feather name={icon} size={16} color={tint} />
       </View>
       <View>
@@ -188,9 +188,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hero: { borderRadius: radius.lg, padding: 20 },
-  heroLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+  heroLabel: { color: colors.gold, fontSize: 13, fontWeight: '600', letterSpacing: 0.3 },
   heroValue: {
-    color: '#fff',
+    color: colors.surface,
     fontSize: 34,
     fontWeight: '800',
     marginTop: 4,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   heroStats: { flexDirection: 'row', marginTop: 18, gap: 12 },
   heroStat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  heroStatLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  heroStatLabel: { color: colors.grey, fontSize: 12 },
   heroStatValue: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
   day: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 16, marginBottom: 8 },
 });

@@ -30,7 +30,7 @@ export function NoteCard({ note, onPress }: { note: Note; onPress: () => void })
         </Text>
       )}
       <View style={[styles.pill, { backgroundColor: palette.accent }]}>
-        <Feather name="calendar" size={11} color="#fff" />
+        <Feather name="calendar" size={11} color={colors.onPrimary} />
         <Text style={styles.pillText}>{formatTimestamp(note.updatedAt)}</Text>
       </View>
     </Pressable>
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, padding: 18, gap: 8 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.text },
-  body: { fontSize: 14, lineHeight: 20, color: '#4B4566' },
+  body: { fontSize: 14, lineHeight: 20, color: colors.muted },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -52,5 +52,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 4,
   },
-  pillText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  pillText: { color: colors.onPrimary, fontSize: 11, fontWeight: '600' },
 });

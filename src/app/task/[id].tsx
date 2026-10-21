@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -75,7 +75,7 @@ export default function TaskEditorScreen() {
     }
   };
 
-  const save = async () => {
+  const doSave = async () => {
     if (!title.trim()) return Alert.alert('Add a title');
     if (endTime && dueTime && endTime <= dueTime) {
       return Alert.alert('Check the times', 'End time must be after the start time.');
@@ -103,6 +103,18 @@ export default function TaskEditorScreen() {
       return;
     }
     router.back();
+  };
+
+  // Ignore repeat taps while a save is in flight, so one entry can't be stored twice.
+  const busy = useRef(false);
+  const save = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      await doSave();
+    } finally {
+      busy.current = false;
+    }
   };
 
   const confirmDelete = () => {
@@ -158,7 +170,7 @@ export default function TaskEditorScreen() {
           placeholder={
             kind === 'reminder' ? 'Remind me to…' : kind === 'agenda' ? 'What’s planned?' : 'What needs doing?'
           }
-          placeholderTextColor="#A39FB5"
+          placeholderTextColor={colors.placeholder}
           value={title}
           onChangeText={setTitle}
           autoFocus={isNew}
@@ -255,5 +267,5 @@ const styles = StyleSheet.create({
   },
   footer: { paddingHorizontal: 20, paddingTop: 10, backgroundColor: colors.background },
   saveButton: { borderRadius: radius.pill, paddingVertical: 16, alignItems: 'center' },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveText: { color: colors.onPrimary, fontSize: 16, fontWeight: '700' },
 });

@@ -37,7 +37,7 @@ export function TaskRow({
         accessibilityState={{ checked: task.done }}
         style={[styles.check, task.done && styles.checkDone]}
       >
-        {task.done && <Feather name="check" size={15} color="#fff" />}
+        {task.done && <Feather name="check" size={15} color={colors.onPrimary} />}
       </Pressable>
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={[styles.title, task.done && styles.titleDone]} numberOfLines={2}>
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: colors.lavender,
+    borderColor: colors.grey,
     alignItems: 'center',
     justifyContent: 'center',
   },

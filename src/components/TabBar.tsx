@@ -55,7 +55,7 @@ export function TabBar({ state, descriptors, emitter, navigateToTab }: BottomTab
                   end={{ x: 1, y: 1 }}
                   style={styles.activeIcon}
                 >
-                  <Feather name={icon} size={18} color="#fff" />
+                  <Feather name={icon} size={18} color={colors.onPrimary} />
                 </LinearGradient>
                 <Text style={styles.activeLabel} numberOfLines={1}>
                   {label}
@@ -72,7 +72,7 @@ export function TabBar({ state, descriptors, emitter, navigateToTab }: BottomTab
               accessibilityLabel={label}
               style={styles.tab}
             >
-              <Feather name={icon} size={20} color="#fff" />
+              <Feather name={icon} size={20} color={colors.grey} />
             </Pressable>
           );
         })}
@@ -93,11 +93,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.navy,
+    backgroundColor: colors.chrome,
     borderRadius: radius.pill,
     padding: 6,
-    shadowColor: colors.navy,
-    shadowOpacity: 0.3,
+    shadowColor: colors.chrome,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 10,
@@ -107,14 +107,14 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(179,167,160,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   activeTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderRadius: radius.pill,
     padding: 4,
     paddingRight: 16,

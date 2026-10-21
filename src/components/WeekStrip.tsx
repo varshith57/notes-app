@@ -55,11 +55,11 @@ export function WeekStrip({
             </Text>
             {isSelected ? (
               <LinearGradient colors={gradient} style={styles.num}>
-                <Text style={[styles.numText, { color: '#fff' }]}>{date.getDate()}</Text>
+                <Text style={[styles.numText, { color: colors.onPrimary }]}>{date.getDate()}</Text>
               </LinearGradient>
             ) : (
-              <View style={[styles.num, { backgroundColor: '#F2ECFF' }]}>
-                <Text style={[styles.numText, day === today && { color: colors.primary }]}>
+              <View style={[styles.num, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.numText, day === today && { color: colors.primary, fontWeight: '800' }]}>
                   {date.getDate()}
                 </Text>
               </View>
@@ -86,9 +86,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  daySelected: { borderColor: '#F4C9A8' },
+  daySelected: { borderColor: colors.gold },
   weekday: { fontSize: 13, fontWeight: '600', color: colors.muted },
   num: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  numText: { fontSize: 14, fontWeight: '700', color: '#A894D8' },
-  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.primary },
+  numText: { fontSize: 14, fontWeight: '700', color: colors.muted },
+  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.gold },
 });

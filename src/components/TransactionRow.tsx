@@ -12,7 +12,7 @@ export function TransactionRow({ tx, onPress }: { tx: Transaction; onPress: () =
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
     >
-      <View style={[styles.icon, { backgroundColor: income ? '#E1F6EA' : '#FFE9EA' }]}>
+      <View style={[styles.icon, { backgroundColor: income ? colors.incomeSoft : colors.expenseSoft }]}>
         <Text style={{ fontSize: 20 }}>{categoryIcon(tx.direction, tx.category)}</Text>
       </View>
       <View style={{ flex: 1 }}>

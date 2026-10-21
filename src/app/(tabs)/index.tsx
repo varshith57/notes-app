@@ -16,7 +16,7 @@ import { getTaskStats, listUpcoming } from '@/db/tasksRepo';
 import type { FinanceSummary, Note, Task } from '@/db/types';
 import { formatLongDate, formatMoney, todayISO } from '@/lib/format';
 import { toggleTaskDone } from '@/lib/taskActions';
-import { colors, radius } from '@/lib/theme';
+import { colors, goldGradient, gradient, radius } from '@/lib/theme';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -26,10 +26,10 @@ function greeting(): string {
 }
 
 const SHORTCUTS: { label: string; icon: keyof typeof Feather.glyphMap; bg: string; fg: string; href: Href }[] = [
-  { label: 'Notes', icon: 'file-text', bg: '#EFE8FF', fg: '#8B5CF6', href: '/notes' },
-  { label: 'Finance', icon: 'credit-card', bg: '#E3F1FF', fg: '#2F8CF0', href: '/finance' },
-  { label: 'Agenda', icon: 'calendar', bg: '#FFF4D6', fg: '#E0A800', href: { pathname: '/tasks', params: { view: 'agenda' } } },
-  { label: 'Reminders', icon: 'bell', bg: '#FFE6F1', fg: '#F0508F', href: { pathname: '/tasks', params: { view: 'reminder' } } },
+  { label: 'Notes', icon: 'file-text', bg: colors.primarySoft, fg: colors.primary, href: '/notes' },
+  { label: 'Finance', icon: 'credit-card', bg: colors.goldSoft, fg: colors.goldDark, href: '/finance' },
+  { label: 'Agenda', icon: 'calendar', bg: colors.surface, fg: colors.text, href: { pathname: '/tasks', params: { view: 'agenda' } } },
+  { label: 'Reminders', icon: 'bell', bg: colors.primarySoft, fg: colors.primary, href: { pathname: '/tasks', params: { view: 'reminder' } } },
 ];
 
 export default function HomeScreen() {
@@ -65,12 +65,14 @@ export default function HomeScreen() {
 
         <View style={styles.tiles}>
           <CreateTile
-            colors={['#C3A8FA', '#A684F2']}
+            colors={gradient}
+            ink={colors.onPrimary}
             label="New Note"
             onPress={() => router.push({ pathname: '/note/[id]', params: { id: 'new' } })}
           />
           <CreateTile
-            colors={['#F8CD5E', '#F2B22F']}
+            colors={goldGradient}
+            ink={colors.text}
             label="New Task"
             onPress={() => router.push({ pathname: '/task/[id]', params: { id: 'new', kind: 'todo' } })}
           />
@@ -153,24 +155,27 @@ export default function HomeScreen() {
   );
 }
 
+/** `ink` is the text/icon colour — white on burgundy, black on gold (white on gold fails contrast). */
 function CreateTile({
   colors: tileColors,
+  ink,
   label,
   onPress,
 }: {
   colors: readonly [string, string];
+  ink: string;
   label: string;
   onPress: () => void;
 }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.9 }]}>
       <LinearGradient colors={tileColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tile}>
-        <View style={styles.tilePlus}>
-          <Feather name="plus" size={20} color="#fff" />
+        <View style={[styles.tilePlus, { borderColor: ink }]}>
+          <Feather name="plus" size={20} color={ink} />
         </View>
         <View>
-          <Text style={styles.tileSmall}>Create</Text>
-          <Text style={styles.tileBig}>{label}</Text>
+          <Text style={[styles.tileSmall, { color: ink }]}>Create</Text>
+          <Text style={[styles.tileBig, { color: ink }]}>{label}</Text>
         </View>
       </LinearGradient>
     </Pressable>
@@ -200,12 +205,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1.5,
+    opacity: 0.9,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tileSmall: { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
-  tileBig: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  tileSmall: { fontSize: 15, opacity: 0.85 },
+  tileBig: { fontSize: 24, fontWeight: '800' },
   progressCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 18,
     borderRadius: radius.lg,
-    backgroundColor: '#F7F2FF',
+    backgroundColor: colors.surface,
   },
   net: { fontSize: 24, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] },
   moneyLine: { fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },

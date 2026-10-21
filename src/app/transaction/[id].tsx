@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -120,7 +120,7 @@ export default function TransactionEditorScreen() {
     );
   };
 
-  const save = async () => {
+  const doSave = async () => {
     const cents = parseMoneyToCents(amount);
     if (cents == null) return Alert.alert('Enter an amount', 'For example 1250 or 1250.50.');
     if (!category) return Alert.alert('Pick a category');
@@ -130,6 +130,18 @@ export default function TransactionEditorScreen() {
     else await updateTransaction(db, txId, input);
     emitDataChanged('finance');
     router.back();
+  };
+
+  // Ignore repeat taps while a save is in flight, so one entry can't be stored twice.
+  const busy = useRef(false);
+  const save = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      await doSave();
+    } finally {
+      busy.current = false;
+    }
   };
 
   const confirmDelete = () => {
@@ -184,7 +196,7 @@ export default function TransactionEditorScreen() {
           <TextInput
             style={[styles.amount, { color: accent }]}
             placeholder="0.00"
-            placeholderTextColor="#C9C5D6"
+            placeholderTextColor={colors.grey}
             keyboardType="decimal-pad"
             value={amount}
             onChangeText={setAmount}
@@ -200,7 +212,7 @@ export default function TransactionEditorScreen() {
               <Pressable
                 key={c.name}
                 onPress={() => pickCategory(c.name)}
-                style={[styles.catTile, selected && { borderColor: accent, backgroundColor: '#FFF' }]}
+                style={[styles.catTile, selected && { borderColor: accent, backgroundColor: colors.background }]}
               >
                 <Text style={{ fontSize: 22 }}>{c.icon}</Text>
                 <Text style={styles.catName} numberOfLines={2}>
@@ -250,7 +262,7 @@ export default function TransactionEditorScreen() {
                   returnKeyType="done"
                 />
                 <Pressable onPress={addSub} style={[styles.addButton, { backgroundColor: accent }]}>
-                  <Feather name="check" size={20} color="#fff" />
+                  <Feather name="check" size={20} color={colors.onPrimary} />
                 </Pressable>
                 <Pressable onPress={() => setAdding(false)} style={styles.cancelButton}>
                   <Feather name="x" size={20} color={colors.muted} />
@@ -329,5 +341,5 @@ const styles = StyleSheet.create({
   },
   footer: { paddingHorizontal: 20, paddingTop: 10, backgroundColor: colors.background },
   saveButton: { borderRadius: radius.pill, paddingVertical: 16, alignItems: 'center' },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveText: { color: colors.onPrimary, fontSize: 16, fontWeight: '700' },
 });
