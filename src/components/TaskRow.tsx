@@ -2,10 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Task } from '@/db/types';
-import { formatDay, todayISO } from '@/lib/format';
+import { formatDay, formatTime, todayISO } from '@/lib/format';
 import { colors, PRIORITY_COLORS, radius } from '@/lib/theme';
-
-import { formatTime } from './DateTimeField';
 
 const KIND_ICON = { todo: 'check-square', agenda: 'calendar', reminder: 'bell' } as const;
 

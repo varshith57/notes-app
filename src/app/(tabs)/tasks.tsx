@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { formatTime } from '@/components/DateTimeField';
 import { TAB_BAR_SPACE } from '@/components/TabBar';
 import { TaskRow } from '@/components/TaskRow';
 import { WeekStrip, weekOf } from '@/components/WeekStrip';
@@ -12,7 +11,7 @@ import { EmptyState, Fab, ScreenTitle, Segmented } from '@/components/ui';
 import { listBusyDays, listForDay, listReminders, listTodos } from '@/db/tasksRepo';
 import type { Task, TaskKind } from '@/db/types';
 import { onDataChanged } from '@/lib/dataEvents';
-import { formatLongDate, fromISODate, todayISO } from '@/lib/format';
+import { formatLongDate, formatTime, fromISODate, todayISO } from '@/lib/format';
 import { toggleTaskDone } from '@/lib/taskActions';
 import { colors, radius } from '@/lib/theme';
 

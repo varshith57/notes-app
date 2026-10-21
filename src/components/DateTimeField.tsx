@@ -2,23 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatDay, fromISODate, toISODate } from '@/lib/format';
+import { formatDay, formatTime, fromHHMM, fromISODate, toHHMM, toISODate } from '@/lib/format';
 import { colors, radius } from '@/lib/theme';
-
-function toHHMM(d: Date): string {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-function fromHHMM(hhmm: string): Date {
-  const d = new Date();
-  const [h, m] = hhmm.split(':').map(Number);
-  d.setHours(h, m, 0, 0);
-  return d;
-}
-
-export function formatTime(hhmm: string): string {
-  return fromHHMM(hhmm).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-}
 
 /**
  * Date or time field. iOS shows the native compact picker inline; Android opens the

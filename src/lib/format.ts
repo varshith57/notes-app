@@ -59,6 +59,24 @@ export function formatDay(iso: string): string {
   return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Local time of day as HH:MM (24h). */
+export function toHHMM(d: Date): string {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Today at the given HH:MM. */
+export function fromHHMM(hhmm: string): Date {
+  const d = new Date();
+  const [h, m] = hhmm.split(':').map(Number);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+/** "6:30 PM" (or "18:30", per the device locale). */
+export function formatTime(hhmm: string): string {
+  return fromHHMM(hhmm).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 export function formatTimestamp(iso: string): string {
   return formatDay(toISODate(new Date(iso)));
 }
