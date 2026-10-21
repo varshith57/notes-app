@@ -15,6 +15,7 @@ import { listNotes } from '@/db/notesRepo';
 import { getTaskStats, listUpcoming } from '@/db/tasksRepo';
 import type { FinanceSummary, Note, Task } from '@/db/types';
 import { formatLongDate, formatMoney, todayISO } from '@/lib/format';
+import { periodRange } from '@/lib/periods';
 import { toggleTaskDone } from '@/lib/taskActions';
 import { colors, goldGradient, gradient, radius } from '@/lib/theme';
 
@@ -42,7 +43,7 @@ export default function HomeScreen() {
   const load = useCallback(async () => {
     const today = todayISO();
     setStats(await getTaskStats(db, today));
-    setMoney(await getFinanceSummary(db, today.slice(0, 7)));
+    setMoney(await getFinanceSummary(db, periodRange('month', today)));
     setUpcoming(await listUpcoming(db, today, 3));
     setRecent(await listNotes(db, '', 2));
   }, [db]);

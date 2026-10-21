@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import {
   createTask,
   deleteTask,
+  deleteTasks,
   getTask,
   setTaskDone,
   setTaskNotificationId,
@@ -48,4 +49,9 @@ export async function toggleTaskDone(db: SQLiteDatabase, task: Task): Promise<vo
 export async function removeTask(db: SQLiteDatabase, task: Task): Promise<void> {
   await cancelReminder(task.notificationId);
   await deleteTask(db, task.id);
+}
+
+export async function removeTasks(db: SQLiteDatabase, tasks: Task[]): Promise<void> {
+  await Promise.all(tasks.map((t) => cancelReminder(t.notificationId)));
+  await deleteTasks(db, tasks.map((t) => t.id));
 }

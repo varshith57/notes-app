@@ -61,6 +61,17 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_tasks_kind_due ON tasks (kind, done, due_on, due_time);
   `,
+  // v2: note colours moved from pastels to the app palette.
+  `
+  UPDATE notes SET color = CASE color
+    WHEN 'lavender' THEN 'cream'
+    WHEN 'sunny'    THEN 'gold'
+    WHEN 'sky'      THEN 'grey'
+    WHEN 'rose'     THEN 'burgundy'
+    WHEN 'mint'     THEN 'black'
+    ELSE color
+  END;
+  `,
 ];
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {

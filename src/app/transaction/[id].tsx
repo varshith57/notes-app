@@ -1,10 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateTimeField } from '@/components/DateTimeField';
-import { Chip, SectionLabel, Segmented } from '@/components/ui';
+import { Chip, SectionLabel, Segmented, webHeaderLeft } from '@/components/ui';
 import {
   createTransaction,
   deleteTransaction,
@@ -32,8 +31,10 @@ import {
 } from '@/db/subcategoriesRepo';
 import type { Direction } from '@/db/types';
 import { CATEGORIES, findCategory } from '@/lib/categories';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
-import { parseMoneyToCents, todayISO } from '@/lib/format';
+import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
+import { centsToInput, parseMoneyToCents, todayISO } from '@/lib/format';
 import { colors, gradient, radius } from '@/lib/theme';
 
 export default function TransactionEditorScreen() {
@@ -54,17 +55,33 @@ export default function TransactionEditorScreen() {
   const [adding, setAdding] = useState(false);
   const [newSub, setNewSub] = useState('');
 
+  // Unsaved-changes guard: compare the form with what was loaded (or the blank form).
+  const form = JSON.stringify([direction, amount, category, subcategory, occurredOn, note]);
+  const pristine = useRef<string | null>(isNew ? form : null);
+  const allowLeave = useUnsavedChangesGuard(
+    loaded && pristine.current !== null && form !== pristine.current,
+    'this entry',
+  );
+
   useEffect(() => {
     if (txId == null) return;
     getTransaction(db, txId).then((tx) => {
-      if (!tx) return router.back();
+      if (!tx) return leaveTo('/finance');
       setDirection(tx.direction);
       // Plain digits, not locale-formatted, so the parser round-trips in every locale.
-      setAmount((tx.amountCents / 100).toFixed(2));
+      setAmount(centsToInput(tx.amountCents));
       setCategory(tx.category);
       setSubcategory(tx.subcategory);
       setOccurredOn(tx.occurredOn);
       setNote(tx.note);
+      pristine.current = JSON.stringify([
+        tx.direction,
+        centsToInput(tx.amountCents),
+        tx.category,
+        tx.subcategory,
+        tx.occurredOn,
+        tx.note,
+      ]);
       setLoaded(true);
     });
   }, [db, txId]);
@@ -101,35 +118,29 @@ export default function TransactionEditorScreen() {
     setAdding(false);
   };
 
-  const confirmRemoveSub = (sub: CustomSubcategory) => {
-    Alert.alert(
+  const confirmRemoveSub = async (sub: CustomSubcategory) => {
+    const ok = await confirmDestructive(
       `Remove "${sub.name}"?`,
       'It disappears from this list. Entries already using it keep their label.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteCustomSubcategory(db, sub.id);
-            if (subcategory === sub.name) setSubcategory(null);
-            loadCustom();
-          },
-        },
-      ],
+      'Remove',
     );
+    if (!ok) return;
+    await deleteCustomSubcategory(db, sub.id);
+    if (subcategory === sub.name) setSubcategory(null);
+    loadCustom();
   };
 
   const doSave = async () => {
     const cents = parseMoneyToCents(amount);
-    if (cents == null) return Alert.alert('Enter an amount', 'For example 1250 or 1250.50.');
-    if (!category) return Alert.alert('Pick a category');
+    if (cents == null) return showMessage('Enter an amount', 'For example 1250 or 1250.50.');
+    if (!category) return showMessage('Pick a category');
 
     const input = { direction, amountCents: cents, category, subcategory, occurredOn, note: note.trim() };
     if (txId == null) await createTransaction(db, input);
     else await updateTransaction(db, txId, input);
     emitDataChanged('finance');
-    router.back();
+    allowLeave();
+    leaveTo('/finance');
   };
 
   // Ignore repeat taps while a save is in flight, so one entry can't be stored twice.
@@ -144,20 +155,13 @@ export default function TransactionEditorScreen() {
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (txId == null) return;
-    Alert.alert('Delete this entry?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteTransaction(db, txId);
-          emitDataChanged('finance');
-          router.back();
-        },
-      },
-    ]);
+    if (!(await confirmDestructive('Delete this entry?', 'This cannot be undone.'))) return;
+    await deleteTransaction(db, txId);
+    emitDataChanged('finance');
+    allowLeave();
+    leaveTo('/finance');
   };
 
   if (!loaded) return null;
@@ -174,6 +178,7 @@ export default function TransactionEditorScreen() {
       <Stack.Screen
         options={{
           title: isNew ? 'New entry' : 'Edit entry',
+          headerLeft: webHeaderLeft('/finance'),
           headerRight: () =>
             txId != null ? (
               <Pressable onPress={confirmDelete} hitSlop={8} accessibilityLabel="Delete entry">
@@ -195,7 +200,7 @@ export default function TransactionEditorScreen() {
         <View style={styles.amountBox}>
           <TextInput
             style={[styles.amount, { color: accent }]}
-            placeholder="0.00"
+            placeholder="0"
             placeholderTextColor={colors.grey}
             keyboardType="decimal-pad"
             value={amount}
@@ -261,10 +266,18 @@ export default function TransactionEditorScreen() {
                   onSubmitEditing={addSub}
                   returnKeyType="done"
                 />
-                <Pressable onPress={addSub} style={[styles.addButton, { backgroundColor: accent }]}>
+                <Pressable
+                  onPress={addSub}
+                  accessibilityLabel="Add subcategory"
+                  style={[styles.addButton, { backgroundColor: accent }]}
+                >
                   <Feather name="check" size={20} color={colors.onPrimary} />
                 </Pressable>
-                <Pressable onPress={() => setAdding(false)} style={styles.cancelButton}>
+                <Pressable
+                  onPress={() => setAdding(false)}
+                  accessibilityLabel="Cancel new subcategory"
+                  style={styles.cancelButton}
+                >
                   <Feather name="x" size={20} color={colors.muted} />
                 </Pressable>
               </View>

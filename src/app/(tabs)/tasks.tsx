@@ -1,18 +1,21 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ComponentProps } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SelectionBar } from '@/components/SelectionBar';
 import { TAB_BAR_SPACE } from '@/components/TabBar';
 import { TaskRow } from '@/components/TaskRow';
 import { WeekStrip, weekOf } from '@/components/WeekStrip';
 import { EmptyState, Fab, ScreenTitle, Segmented } from '@/components/ui';
 import { listBusyDays, listForDay, listReminders, listTodos } from '@/db/tasksRepo';
 import type { Task, TaskKind } from '@/db/types';
-import { onDataChanged } from '@/lib/dataEvents';
+import { useSelection } from '@/hooks/useSelection';
+import { emitDataChanged, onDataChanged } from '@/lib/dataEvents';
+import { confirmDestructive } from '@/lib/dialogs';
 import { formatLongDate, formatTime, fromISODate, todayISO } from '@/lib/format';
-import { toggleTaskDone } from '@/lib/taskActions';
+import { removeTasks, toggleTaskDone } from '@/lib/taskActions';
 import { colors, radius } from '@/lib/theme';
 
 const EMPTY: Record<TaskKind, { title: string; hint: string }> = {
@@ -29,6 +32,8 @@ export default function TasksScreen() {
   const [showDone, setShowDone] = useState(false);
   const [items, setItems] = useState<Task[]>([]);
   const [busyDays, setBusyDays] = useState<Set<string>>(new Set());
+  const selection = useSelection();
+  const { clear: clearSelection } = selection;
 
   // Home screen shortcuts deep-link into a specific view.
   useEffect(() => {
@@ -47,9 +52,23 @@ export default function TasksScreen() {
         }
       };
       load();
-      return onDataChanged('tasks', load);
-    }, [db, view, day, showDone]),
+      const unsubscribe = onDataChanged('tasks', load);
+      // Leaving the tab or switching view/day ends any selection.
+      return () => {
+        unsubscribe();
+        clearSelection();
+      };
+    }, [db, view, day, showDone, clearSelection]),
   );
+
+  const deleteSelected = async () => {
+    const chosen = items.filter((t) => selection.selected.has(t.id));
+    const label = chosen.length === 1 ? 'this task' : `${chosen.length} tasks`;
+    if (!(await confirmDestructive(`Delete ${label}?`, 'This cannot be undone.'))) return;
+    await removeTasks(db, chosen);
+    selection.clear();
+    emitDataChanged('tasks');
+  };
 
   const toggle = async (task: Task) => {
     await toggleTaskDone(db, task);
@@ -60,8 +79,18 @@ export default function TasksScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {selection.selecting && (
+        <SelectionBar
+          count={selection.selected.size}
+          total={items.length}
+          onCancel={selection.clear}
+          onSelectAll={() => selection.selectAll(items.map((t) => t.id))}
+          onDelete={deleteSelected}
+        />
+      )}
       <FlatList
         data={items}
+        extraData={selection.selected}
         keyExtractor={(t) => String(t.id)}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
@@ -88,13 +117,18 @@ export default function TasksScreen() {
             )}
           </View>
         }
-        renderItem={({ item }) =>
-          view === 'agenda' ? (
-            <AgendaItem task={item} onPress={() => open(item)} onToggle={() => toggle(item)} />
-          ) : (
-            <TaskRow task={item} onPress={() => open(item)} onToggle={() => toggle(item)} />
-          )
-        }
+        renderItem={({ item }) => {
+          // While selecting, both the row and its checkbox toggle selection.
+          const select = () => selection.toggle(item.id);
+          const rowProps = {
+            task: item,
+            selected: selection.selected.has(item.id),
+            onPress: selection.selecting ? select : () => open(item),
+            onToggle: selection.selecting ? select : () => toggle(item),
+            onLongPress: select,
+          };
+          return view === 'agenda' ? <AgendaItem {...rowProps} /> : <TaskRow {...rowProps} />;
+        }}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListEmptyComponent={
           <EmptyState
@@ -103,27 +137,30 @@ export default function TasksScreen() {
           />
         }
       />
-      <Fab
-        label="Add task"
-        bottom={TAB_BAR_SPACE}
-        onPress={() =>
-          router.push({
-            pathname: '/task/[id]',
-            params: { id: 'new', kind: view, ...(view === 'agenda' ? { date: day } : {}) },
-          })
-        }
-      />
+      {!selection.selecting && (
+        <Fab
+          label="Add task"
+          bottom={TAB_BAR_SPACE}
+          onPress={() =>
+            router.push({
+              pathname: '/task/[id]',
+              params: { id: 'new', kind: view, ...(view === 'agenda' ? { date: day } : {}) },
+            })
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 /** Timeline row: time column on the left, tinted card on the right (as in the reference). */
-function AgendaItem({ task, onPress, onToggle }: { task: Task; onPress: () => void; onToggle: () => void }) {
+function AgendaItem(props: ComponentProps<typeof TaskRow>) {
+  const { task } = props;
   return (
     <View style={styles.agendaRow}>
       <Text style={styles.agendaTime}>{task.dueTime ? formatTime(task.dueTime) : 'All day'}</Text>
       <View style={{ flex: 1 }}>
-        <TaskRow task={task} onPress={onPress} onToggle={onToggle} showDate={false} />
+        <TaskRow {...props} showDate={false} />
       </View>
     </View>
   );

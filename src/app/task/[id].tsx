@@ -1,10 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,17 +16,28 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateTimeField } from '@/components/DateTimeField';
-import { Chip, SectionLabel, Segmented } from '@/components/ui';
+import { Chip, SectionLabel, Segmented, webHeaderLeft } from '@/components/ui';
 import { getTask } from '@/db/tasksRepo';
 import type { Priority, Task, TaskKind } from '@/db/types';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
-import { todayISO } from '@/lib/format';
+import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
+import { toHHMM, toISODate } from '@/lib/format';
+import type { ScheduleError } from '@/lib/reminders';
 import { removeTask, saveTask } from '@/lib/taskActions';
 import { colors, gradient, PRIORITY_COLORS, radius } from '@/lib/theme';
 
-function nextHour(): string {
-  const h = (new Date().getHours() + 1) % 24;
-  return `${String(h).padStart(2, '0')}:00`;
+const REMINDER_ERRORS: Record<ScheduleError, string> = {
+  past: 'That time has already passed, so no notification was scheduled.',
+  denied: 'Notifications are turned off for this app. Enable them in Settings to get reminders.',
+  unsupported: 'Reminder notifications only work in the phone app, not in the web preview.',
+};
+
+/** Default slot for new reminders/agenda items: the top of the next hour (tomorrow after 11 pm). */
+function nextHourSlot(): { date: string; time: string } {
+  const d = new Date();
+  d.setHours(d.getHours() + 1, 0, 0, 0);
+  return { date: toISODate(d), time: toHHMM(d) };
 }
 
 export default function TaskEditorScreen() {
@@ -44,16 +54,26 @@ export default function TaskEditorScreen() {
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [dueOn, setDueOn] = useState<string | null>(
-    params.date ?? (initialKind === 'todo' ? null : todayISO()),
+    params.date ?? (initialKind === 'todo' ? null : nextHourSlot().date),
   );
-  const [dueTime, setDueTime] = useState<string | null>(initialKind === 'todo' ? null : nextHour());
+  const [dueTime, setDueTime] = useState<string | null>(
+    initialKind === 'todo' ? null : nextHourSlot().time,
+  );
   const [endTime, setEndTime] = useState<string | null>(null);
   const [priority, setPriority] = useState<Priority>('medium');
+
+  // Unsaved-changes guard: compare the form with what was loaded (or the blank form).
+  const form = JSON.stringify([kind, title, details, dueOn, dueTime, endTime, priority]);
+  const pristine = useRef<string | null>(isNew ? form : null);
+  const allowLeave = useUnsavedChangesGuard(
+    loaded && pristine.current !== null && form !== pristine.current,
+    'this task',
+  );
 
   useEffect(() => {
     if (taskId == null) return;
     getTask(db, taskId).then((t) => {
-      if (!t) return router.back();
+      if (!t) return leaveTo('/tasks');
       setExisting(t);
       setKind(t.kind);
       setTitle(t.title);
@@ -62,6 +82,15 @@ export default function TaskEditorScreen() {
       setDueTime(t.dueTime);
       setEndTime(t.endTime);
       setPriority(t.priority);
+      pristine.current = JSON.stringify([
+        t.kind,
+        t.title,
+        t.details,
+        t.dueOn,
+        t.dueTime,
+        t.endTime,
+        t.priority,
+      ]);
       setLoaded(true);
     });
   }, [db, taskId]);
@@ -70,15 +99,15 @@ export default function TaskEditorScreen() {
     setKind(k);
     // Agenda items and reminders always need a day and a time.
     if (k !== 'todo') {
-      setDueOn((d) => d ?? todayISO());
-      setDueTime((t) => t ?? nextHour());
+      setDueOn((d) => d ?? nextHourSlot().date);
+      setDueTime((t) => t ?? nextHourSlot().time);
     }
   };
 
   const doSave = async () => {
-    if (!title.trim()) return Alert.alert('Add a title');
+    if (!title.trim()) return showMessage('Add a title');
     if (endTime && dueTime && endTime <= dueTime) {
-      return Alert.alert('Check the times', 'End time must be after the start time.');
+      return showMessage('Check the times', 'End time must be after the start time.');
     }
 
     const result = await saveTask(db, taskId, {
@@ -93,16 +122,10 @@ export default function TaskEditorScreen() {
     emitDataChanged('tasks');
 
     if (result && 'error' in result) {
-      Alert.alert(
-        'Saved without an alert',
-        result.error === 'past'
-          ? 'That time has already passed, so no notification was scheduled.'
-          : 'Notifications are turned off for this app. Enable them in Settings to get reminders.',
-        [{ text: 'OK', onPress: () => router.back() }],
-      );
-      return;
+      await showMessage('Saved without an alert', REMINDER_ERRORS[result.error]);
     }
-    router.back();
+    allowLeave();
+    leaveTo('/tasks');
   };
 
   // Ignore repeat taps while a save is in flight, so one entry can't be stored twice.
@@ -117,20 +140,13 @@ export default function TaskEditorScreen() {
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!existing) return;
-    Alert.alert('Delete this task?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await removeTask(db, existing);
-          emitDataChanged('tasks');
-          router.back();
-        },
-      },
-    ]);
+    if (!(await confirmDestructive('Delete this task?', 'This cannot be undone.'))) return;
+    await removeTask(db, existing);
+    emitDataChanged('tasks');
+    allowLeave();
+    leaveTo('/tasks');
   };
 
   if (!loaded) return null;
@@ -146,6 +162,7 @@ export default function TaskEditorScreen() {
       <Stack.Screen
         options={{
           title: isNew ? 'New task' : 'Edit task',
+          headerLeft: webHeaderLeft('/tasks'),
           headerRight: () =>
             existing ? (
               <Pressable onPress={confirmDelete} hitSlop={8} accessibilityLabel="Delete task">

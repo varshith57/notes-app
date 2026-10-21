@@ -78,3 +78,8 @@ export async function updateNote(db: SQLiteDatabase, id: number, input: NoteInpu
 export async function deleteNote(db: SQLiteDatabase, id: number): Promise<void> {
   await db.runAsync('DELETE FROM notes WHERE id = ?', id);
 }
+
+export async function deleteNotes(db: SQLiteDatabase, ids: number[]): Promise<void> {
+  if (!ids.length) return;
+  await db.runAsync(`DELETE FROM notes WHERE id IN (${ids.map(() => '?').join(',')})`, ...ids);
+}

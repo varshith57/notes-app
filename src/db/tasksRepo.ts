@@ -162,3 +162,8 @@ export async function setTaskDone(db: SQLiteDatabase, id: number, done: boolean)
 export async function deleteTask(db: SQLiteDatabase, id: number): Promise<void> {
   await db.runAsync('DELETE FROM tasks WHERE id = ?', id);
 }
+
+export async function deleteTasks(db: SQLiteDatabase, ids: number[]): Promise<void> {
+  if (!ids.length) return;
+  await db.runAsync(`DELETE FROM tasks WHERE id IN (${ids.map(() => '?').join(',')})`, ...ids);
+}

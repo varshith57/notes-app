@@ -1,17 +1,33 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Transaction } from '@/db/types';
+import { SELECT_HOLD_MS } from '@/hooks/useSelection';
 import { categoryIcon } from '@/lib/categories';
 import { formatMoney } from '@/lib/format';
 import { colors, radius } from '@/lib/theme';
 
-export function TransactionRow({ tx, onPress }: { tx: Transaction; onPress: () => void }) {
+import { SelectedBadge, selectedStyle } from './SelectionBar';
+
+export function TransactionRow({
+  tx,
+  onPress,
+  onLongPress,
+  selected = false,
+}: {
+  tx: Transaction;
+  onPress: () => void;
+  onLongPress?: () => void;
+  selected?: boolean;
+}) {
   const income = tx.direction === 'income';
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+      onLongPress={onLongPress}
+      delayLongPress={SELECT_HOLD_MS}
+      style={({ pressed }) => [styles.row, selected && selectedStyle, pressed && { opacity: 0.7 }]}
     >
+      {selected && <SelectedBadge />}
       <View style={[styles.icon, { backgroundColor: income ? colors.incomeSoft : colors.expenseSoft }]}>
         <Text style={{ fontSize: 20 }}>{categoryIcon(tx.direction, tx.category)}</Text>
       </View>
@@ -37,9 +53,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
+    padding: 10,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
+    // Transparent border reserves space so selecting doesn't shift the layout.
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   icon: {
     width: 44,

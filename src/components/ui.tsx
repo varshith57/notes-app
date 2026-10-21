@@ -1,8 +1,18 @@
 import { Feather } from '@expo/vector-icons';
+import type { Href } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
+import { leaveTo } from '@/lib/dialogs';
 import { colors, gradient, progressGradient, radius } from '@/lib/theme';
 
 type IconName = keyof typeof Feather.glyphMap;
@@ -157,6 +167,21 @@ export function EmptyState({ icon, title, hint }: { icon: IconName; title: strin
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyHint}>{hint}</Text>
     </View>
+  );
+}
+
+/**
+ * Web-only header back arrow for editors. In the browser an editor can be reloaded or
+ * opened by URL with no history, where the stack shows no arrow at all, and whether
+ * history exists isn't reliable at render time. So decide on tap: go back when
+ * possible, otherwise to `fallback`. Phones keep the native back button and swipe.
+ */
+export function webHeaderLeft(fallback: Href, color: string = colors.text) {
+  if (Platform.OS !== 'web') return undefined;
+  return () => (
+    <Pressable onPress={() => leaveTo(fallback)} hitSlop={10} accessibilityLabel="Back">
+      <Feather name="arrow-left" size={22} color={color} />
+    </Pressable>
   );
 }
 

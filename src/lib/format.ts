@@ -1,8 +1,15 @@
+/** "1,250" for whole amounts; decimals only when the amount has them ("1,250.50"). */
 export function formatMoney(cents: number): string {
+  const digits = cents % 100 === 0 ? 0 : 2;
   return (cents / 100).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   });
+}
+
+/** Plain, unformatted amount for an input field: "1250" or "1250.50". */
+export function centsToInput(cents: number): string {
+  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
 }
 
 /** Parses user input like "1,234.5" into integer cents. Returns null when invalid or zero. */
@@ -27,20 +34,6 @@ export function fromISODate(iso: string): Date {
 
 export function todayISO(): string {
   return toISODate(new Date());
-}
-
-/** YYYY-MM for the month containing `iso`, shifted by `delta` months. */
-export function shiftMonth(month: string, delta: number): string {
-  const [y, m] = month.split('-').map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-}
-
-export function formatMonth(month: string): string {
-  return fromISODate(`${month}-01`).toLocaleDateString(undefined, {
-    month: 'long',
-    year: 'numeric',
-  });
 }
 
 export function formatLongDate(d: Date): string {

@@ -5,11 +5,14 @@ import { FlatList, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NoteCard } from '@/components/NoteCard';
+import { SelectionBar } from '@/components/SelectionBar';
 import { TAB_BAR_SPACE } from '@/components/TabBar';
 import { EmptyState, Fab, IconButton, ScreenTitle } from '@/components/ui';
-import { listNotes } from '@/db/notesRepo';
+import { deleteNotes, listNotes } from '@/db/notesRepo';
 import type { Note } from '@/db/types';
-import { onDataChanged } from '@/lib/dataEvents';
+import { useSelection } from '@/hooks/useSelection';
+import { emitDataChanged, onDataChanged } from '@/lib/dataEvents';
+import { confirmDestructive } from '@/lib/dialogs';
 import { colors, radius } from '@/lib/theme';
 
 export default function NotesScreen() {
@@ -17,21 +20,46 @@ export default function NotesScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState('');
+  const selection = useSelection();
+  const { clear: clearSelection } = selection;
 
   useFocusEffect(
     useCallback(() => {
       const load = () => listNotes(db, search).then(setNotes);
       load();
-      return onDataChanged('notes', load);
-    }, [db, search]),
+      const unsubscribe = onDataChanged('notes', load);
+      return () => {
+        unsubscribe();
+        clearSelection();
+      };
+    }, [db, search, clearSelection]),
   );
 
   const openNote = (id: number | 'new') => router.push({ pathname: '/note/[id]', params: { id } });
 
+  const deleteSelected = async () => {
+    const ids = [...selection.selected];
+    const label = ids.length === 1 ? 'this note' : `${ids.length} notes`;
+    if (!(await confirmDestructive(`Delete ${label}?`, 'This cannot be undone.'))) return;
+    await deleteNotes(db, ids);
+    selection.clear();
+    emitDataChanged('notes');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {selection.selecting && (
+        <SelectionBar
+          count={selection.selected.size}
+          total={notes.length}
+          onCancel={selection.clear}
+          onSelectAll={() => selection.selectAll(notes.map((n) => n.id))}
+          onDelete={deleteSelected}
+        />
+      )}
       <FlatList
         data={notes}
+        extraData={selection.selected}
         keyExtractor={(n) => String(n.id)}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
@@ -74,9 +102,18 @@ export default function NotesScreen() {
             />
           )
         }
-        renderItem={({ item }) => <NoteCard note={item} onPress={() => openNote(item.id)} />}
+        renderItem={({ item }) => (
+          <NoteCard
+            note={item}
+            selected={selection.selected.has(item.id)}
+            onPress={() => (selection.selecting ? selection.toggle(item.id) : openNote(item.id))}
+            onLongPress={() => selection.toggle(item.id)}
+          />
+        )}
       />
-      <Fab label="New note" bottom={TAB_BAR_SPACE} onPress={() => openNote('new')} />
+      {!selection.selecting && (
+        <Fab label="New note" bottom={TAB_BAR_SPACE} onPress={() => openNote('new')} />
+      )}
     </SafeAreaView>
   );
 }

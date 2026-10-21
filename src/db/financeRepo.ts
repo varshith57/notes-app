@@ -1,5 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { DateRange } from '@/lib/periods';
+
 import type { Direction, FinanceSummary, Transaction, TransactionInput } from './types';
 
 interface TransactionRow {
@@ -28,17 +30,18 @@ function toTransaction(row: TransactionRow): Transaction {
   };
 }
 
-/** Transactions dated within `month` (YYYY-MM), newest first. */
+/** Transactions dated within `range` (inclusive), newest first. */
 export async function listTransactions(
   db: SQLiteDatabase,
-  month: string,
+  range: DateRange,
   direction?: Direction,
 ): Promise<Transaction[]> {
   const rows = await db.getAllAsync<TransactionRow>(
     `SELECT * FROM transactions
-     WHERE occurred_on LIKE ? || '%' AND (? IS NULL OR direction = ?)
+     WHERE occurred_on BETWEEN ? AND ? AND (? IS NULL OR direction = ?)
      ORDER BY occurred_on DESC, id DESC`,
-    month,
+    range.from,
+    range.to,
     direction ?? null,
     direction ?? null,
   );
@@ -94,22 +97,34 @@ export async function deleteTransaction(db: SQLiteDatabase, id: number): Promise
   await db.runAsync('DELETE FROM transactions WHERE id = ?', id);
 }
 
-/** YYYY-MM of the oldest transaction, or null if there are none. Bounds history browsing. */
-export async function getEarliestMonth(db: SQLiteDatabase): Promise<string | null> {
+export async function deleteTransactions(db: SQLiteDatabase, ids: number[]): Promise<void> {
+  if (!ids.length) return;
+  await db.runAsync(
+    `DELETE FROM transactions WHERE id IN (${ids.map(() => '?').join(',')})`,
+    ...ids,
+  );
+}
+
+/** Date (YYYY-MM-DD) of the oldest transaction, or null if there are none. Bounds history browsing. */
+export async function getEarliestDate(db: SQLiteDatabase): Promise<string | null> {
   const row = await db.getFirstAsync<{ first: string | null }>(
-    'SELECT substr(MIN(occurred_on), 1, 7) AS first FROM transactions',
+    'SELECT MIN(occurred_on) AS first FROM transactions',
   );
   return row?.first ?? null;
 }
 
-export async function getFinanceSummary(db: SQLiteDatabase, month: string): Promise<FinanceSummary> {
+export async function getFinanceSummary(
+  db: SQLiteDatabase,
+  range: DateRange,
+): Promise<FinanceSummary> {
   const row = await db.getFirstAsync<{ income: number | null; expense: number | null }>(
     `SELECT
        SUM(CASE WHEN direction = 'income'  THEN amount_cents END) AS income,
        SUM(CASE WHEN direction = 'expense' THEN amount_cents END) AS expense
      FROM transactions
-     WHERE occurred_on LIKE ? || '%'`,
-    month,
+     WHERE occurred_on BETWEEN ? AND ?`,
+    range.from,
+    range.to,
   );
   return { incomeCents: row?.income ?? 0, expenseCents: row?.expense ?? 0 };
 }
