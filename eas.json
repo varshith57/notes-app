@@ -5,6 +5,9 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "env": {
+        "SLIM_APK": "1"
+      },
       "android": {
         "buildType": "apk"
       }

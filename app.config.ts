@@ -11,10 +11,24 @@ const iosUrlScheme = iosClientId
   ? `com.googleusercontent.apps.${iosClientId.replace('.apps.googleusercontent.com', '')}`
   : 'com.googleusercontent.apps.not-configured';
 
+// Sideloaded APKs (eas.json "preview" profile sets SLIM_APK=1) ship one APK to every phone, so
+// by default it carries native libraries for four CPU types. Keep only 64-bit ARM (nearly all
+// phones since ~2017) and compress the libraries: ~100 MB → ~20 MB. Play Store AABs are already
+// split per device by Google, so production builds keep every architecture.
+const slimApk = process.env.SLIM_APK === '1';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...(config as ExpoConfig),
   plugins: [
     ...(config.plugins ?? []),
     ['@react-native-google-signin/google-signin', { iosUrlScheme }],
+    ...(slimApk
+      ? [
+          [
+            'expo-build-properties',
+            { android: { buildArchs: ['arm64-v8a'], useLegacyPackaging: true } },
+          ] as [string, unknown],
+        ]
+      : []),
   ],
 });
