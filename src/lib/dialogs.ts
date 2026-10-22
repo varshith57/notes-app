@@ -40,6 +40,29 @@ export function confirmDestructive(
   );
 }
 
+/** Asks a two-way question; resolves true for `confirmLabel`, false otherwise. */
+export function confirmChoice(
+  title: string,
+  message: string,
+  confirmLabel: string,
+  cancelLabel: string,
+): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+  }
+  return new Promise((resolve) =>
+    Alert.alert(
+      title,
+      message,
+      [
+        { text: cancelLabel, style: 'cancel', onPress: () => resolve(false) },
+        { text: confirmLabel, onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    ),
+  );
+}
+
 /**
  * Leaves an editor. Falls back to `fallback` when there's no screen to return to
  * (e.g. the editor was opened by URL or reloaded), where router.back() would do nothing.

@@ -1,71 +1,80 @@
 import { Feather } from '@expo/vector-icons';
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { formatDay, formatTime, fromHHMM, fromISODate, toHHMM, toISODate } from '@/lib/format';
+import { formatDay, formatTime } from '@/lib/format';
 import { colors, radius } from '@/lib/theme';
 
+import { DatePickerSheet } from './pickers/DatePickerSheet';
+import { TimePickerSheet } from './pickers/TimePickerSheet';
+
 /**
- * Date or time field. iOS shows the native compact picker inline; Android opens the
- * system dialog on tap. `value` is YYYY-MM-DD (date) or HH:MM (time); null = unset.
+ * Date or time field that opens the app's own themed picker sheet (same look on iOS,
+ * Android and web). `value` is YYYY-MM-DD (date) or HH:MM (time); null = unset.
  */
 export function DateTimeField({
   mode,
   value,
   onChange,
   placeholder,
+  label = mode === 'date' ? 'Date' : 'Time',
   onClear,
 }: {
   mode: 'date' | 'time';
   value: string | null;
   onChange: (v: string) => void;
   placeholder: string;
+  /** What the field is ("End time", "From"…): screen-reader label and sheet title. */
+  label?: string;
   onClear?: () => void;
 }) {
-  const asDate = value ? (mode === 'date' ? fromISODate(value) : fromHHMM(value)) : new Date();
-  const emit = (d: Date) => onChange(mode === 'date' ? toISODate(d) : toHHMM(d));
-  const icon = mode === 'date' ? 'calendar' : 'clock';
-  const label = value ? (mode === 'date' ? formatDay(value) : formatTime(value)) : placeholder;
-
-  if (Platform.OS === 'ios' && value) {
-    return (
-      <View style={styles.field}>
-        <Feather name={icon} size={18} color={colors.primary} />
-        <DateTimePicker
-          value={asDate}
-          mode={mode}
-          display="compact"
-          onValueChange={(_, d) => emit(d)}
-          style={{ flex: 1, alignItems: 'flex-start' }}
-        />
-        {onClear && <ClearButton onPress={onClear} />}
-      </View>
-    );
-  }
-
-  const open = () => {
-    if (Platform.OS === 'android') {
-      DateTimePickerAndroid.open({ value: asDate, mode, onValueChange: (_, d) => emit(d) });
-    } else {
-      // iOS with no value yet: seed with now, which reveals the inline picker above.
-      emit(asDate);
-    }
+  const [open, setOpen] = useState(false);
+  const isDefaultLabel = label === 'Date' || label === 'Time';
+  const sheetTitle = isDefaultLabel ? `Select ${label.toLowerCase()}` : label;
+  const text = value ? (mode === 'date' ? formatDay(value) : formatTime(value)) : placeholder;
+  const done = (v: string) => {
+    setOpen(false);
+    onChange(v);
   };
 
   return (
-    <Pressable onPress={open} style={styles.field}>
-      <Feather name={icon} size={18} color={colors.primary} />
-      <Text style={[styles.text, !value && { color: colors.muted }]}>{label}</Text>
-      {value && onClear && <ClearButton onPress={onClear} />}
-    </Pressable>
-  );
-}
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={styles.field}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value ? text : 'not set'}`}
+      >
+        <Feather name={mode === 'date' ? 'calendar' : 'clock'} size={18} color={colors.primary} />
+        <Text style={[styles.text, !value && { color: colors.muted }]} numberOfLines={1}>
+          {text}
+        </Text>
+        {value && onClear && (
+          <Pressable onPress={onClear} hitSlop={10} accessibilityLabel={`Clear ${label.toLowerCase()}`}>
+            <Feather name="x" size={18} color={colors.muted} />
+          </Pressable>
+        )}
+      </Pressable>
 
-function ClearButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} hitSlop={10} accessibilityLabel="Clear">
-      <Feather name="x" size={18} color={colors.muted} />
-    </Pressable>
+      {open && mode === 'date' && (
+        <DatePickerSheet
+          visible={open}
+          value={value}
+          title={sheetTitle}
+          onDone={done}
+          onCancel={() => setOpen(false)}
+        />
+      )}
+      {open && mode === 'time' && (
+        <TimePickerSheet
+          visible={open}
+          value={value}
+          title={sheetTitle}
+          onDone={done}
+          onCancel={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }
 

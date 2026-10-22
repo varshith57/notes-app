@@ -280,6 +280,22 @@ For JavaScript/UI-only fixes (no new native packages), `eas update` can push cha
 
 ---
 
+## Part C2 — Google Drive backup setup (one time)
+
+Backup uses Google Sign-In plus the Drive **app data** folder (`drive.appdata` scope: a hidden folder only this app can read). Google classes that scope as non-sensitive, so publishing needs only basic OAuth verification.
+
+1. In [Google Cloud Console](https://console.cloud.google.com), create a project (e.g. "My Notes").
+2. **APIs & Services → Library**: enable **Google Drive API**.
+3. **OAuth consent screen**: User type **External**; app name "My Notes", support email, and your privacy policy URL. Add the scope `.../auth/drive.appdata`. While the app is in *Testing*, add your Google account under **Test users**. Publish the consent screen before releasing to the stores.
+4. **Credentials → Create credentials → OAuth client ID**, three times:
+   - **Web application**: no settings needed. Copy its client ID; this is `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+   - **Android**: package `com.varshith.mynotes`, plus the **SHA-1** of the app's signing key. Find it at expo.dev → your project → **Credentials → Android → Keystore**. When the app is on Google Play, also add the SHA-1 shown in Play Console → **App integrity** (Google re-signs Play builds).
+   - **iOS**: bundle ID `com.varshith.mynotes`. Copy its client ID; this is `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
+5. Give the build the two IDs: copy `.env.example` to `.env` for local builds, and for EAS builds add both as EAS environment variables (expo.dev → project → **Environment variables**, environments *preview* and *production*).
+6. Build a new APK or IPA. Settings then shows **Sign in with Google**, and first launch offers it (with **Skip**).
+
+Without these IDs the app still works; Settings just says backup isn't set up.
+
 ## Part D — End-to-end tests on real phone builds
 
 [.maestro/](.maestro/) holds Maestro flows that drive the real app on a phone: notes, finance, tasks, plus the phone's own navigation (iOS edge-swipe back, Android back button, back cancelling a multi-select, keyboard covering Save, backgrounding the app). They use a separate `e2e-test` build profile (iOS simulator build + Android APK, no signing needed).

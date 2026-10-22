@@ -1,15 +1,15 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { Priority, Task, TaskInput, TaskKind } from './types';
+import type { Priority, Task, TaskInput } from './types';
 
 interface TaskRow {
   id: number;
-  kind: TaskKind;
   title: string;
   details: string;
   due_on: string | null;
   due_time: string | null;
   end_time: string | null;
+  remind: number;
   priority: Priority;
   done: number;
   completed_at: string | null;
@@ -21,12 +21,12 @@ interface TaskRow {
 function toTask(row: TaskRow): Task {
   return {
     id: row.id,
-    kind: row.kind,
     title: row.title,
     details: row.details,
     dueOn: row.due_on,
     dueTime: row.due_time,
     endTime: row.end_time,
+    remind: row.remind === 1,
     priority: row.priority,
     done: row.done === 1,
     completedAt: row.completed_at,
@@ -43,16 +43,16 @@ const ORDER = `
            CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
            id DESC`;
 
-/** To-dos: open ones first (by due date, then priority), completed ones after. */
+/** Every task (the master checklist): open ones first by due date/time, then priority. */
 export async function listTodos(db: SQLiteDatabase, showDone: boolean): Promise<Task[]> {
   const rows = await db.getAllAsync<TaskRow>(
-    `SELECT * FROM tasks WHERE kind = 'todo' AND (? = 1 OR done = 0) ${ORDER}`,
+    `SELECT * FROM tasks WHERE (? = 1 OR done = 0) ${ORDER}`,
     showDone ? 1 : 0,
   );
   return rows.map(toTask);
 }
 
-/** Everything scheduled on a given day — agenda blocks, reminders and dated to-dos. */
+/** Everything dated on a given day, in time order (untimed items last). */
 export async function listForDay(db: SQLiteDatabase, day: string): Promise<Task[]> {
   const rows = await db.getAllAsync<TaskRow>(
     `SELECT * FROM tasks WHERE due_on = ?
@@ -72,9 +72,12 @@ export async function listBusyDays(db: SQLiteDatabase, from: string, to: string)
   return rows.map((r) => r.due_on);
 }
 
+/** Tasks that will notify you: reminder on, with a date and a time. */
 export async function listReminders(db: SQLiteDatabase, showDone: boolean): Promise<Task[]> {
   const rows = await db.getAllAsync<TaskRow>(
-    `SELECT * FROM tasks WHERE kind = 'reminder' AND (? = 1 OR done = 0) ${ORDER}`,
+    `SELECT * FROM tasks
+     WHERE remind = 1 AND due_on IS NOT NULL AND due_time IS NOT NULL AND (? = 1 OR done = 0)
+     ${ORDER}`,
     showDone ? 1 : 0,
   );
   return rows.map(toTask);
@@ -95,7 +98,7 @@ export async function getTaskStats(
 ): Promise<{ done: number; total: number }> {
   const row = await db.getFirstAsync<{ done: number | null; total: number }>(
     `SELECT SUM(done) AS done, COUNT(*) AS total FROM tasks
-     WHERE due_on = ? OR (due_on IS NULL AND kind = 'todo')`,
+     WHERE due_on = ? OR due_on IS NULL`,
     day,
   );
   return { done: row?.done ?? 0, total: row?.total ?? 0 };
@@ -108,14 +111,14 @@ export async function getTask(db: SQLiteDatabase, id: number): Promise<Task | nu
 
 export async function createTask(db: SQLiteDatabase, input: TaskInput): Promise<number> {
   const result = await db.runAsync(
-    `INSERT INTO tasks (kind, title, details, due_on, due_time, end_time, priority)
+    `INSERT INTO tasks (title, details, due_on, due_time, end_time, remind, priority)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    input.kind,
     input.title,
     input.details,
     input.dueOn,
     input.dueTime,
     input.endTime,
+    input.remind ? 1 : 0,
     input.priority,
   );
   return result.lastInsertRowId;
@@ -124,17 +127,36 @@ export async function createTask(db: SQLiteDatabase, input: TaskInput): Promise<
 export async function updateTask(db: SQLiteDatabase, id: number, input: TaskInput): Promise<void> {
   await db.runAsync(
     `UPDATE tasks
-     SET kind = ?, title = ?, details = ?, due_on = ?, due_time = ?, end_time = ?, priority = ?,
+     SET title = ?, details = ?, due_on = ?, due_time = ?, end_time = ?, remind = ?, priority = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
      WHERE id = ?`,
-    input.kind,
     input.title,
     input.details,
     input.dueOn,
     input.dueTime,
     input.endTime,
+    input.remind ? 1 : 0,
     input.priority,
     id,
+  );
+}
+
+/** Open tasks that should have a pending notification, for re-scheduling on app start. */
+export async function listPendingReminders(db: SQLiteDatabase): Promise<Task[]> {
+  const rows = await db.getAllAsync<TaskRow>(
+    `SELECT * FROM tasks
+     WHERE done = 0 AND remind = 1 AND due_on IS NOT NULL AND due_time IS NOT NULL
+       AND notification_id IS NULL`,
+  );
+  return rows.map(toTask);
+}
+
+/** Forget notification ids (e.g. after cancelling them) so they get rescheduled. */
+export async function clearNotificationIds(db: SQLiteDatabase, ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  await db.runAsync(
+    `UPDATE tasks SET notification_id = NULL WHERE notification_id IN (${ids.map(() => '?').join(',')})`,
+    ...ids,
   );
 }
 

@@ -178,11 +178,18 @@ export function EmptyState({ icon, title, hint }: { icon: IconName; title: strin
  */
 export function webHeaderLeft(fallback: Href, color: string = colors.text) {
   if (Platform.OS !== 'web') return undefined;
-  return () => (
-    <Pressable onPress={() => leaveTo(fallback)} hitSlop={10} accessibilityLabel="Back">
-      <Feather name="arrow-left" size={22} color={color} />
-    </Pressable>
-  );
+  return function WebBackButton() {
+    return (
+      <Pressable
+        onPress={() => leaveTo(fallback)}
+        hitSlop={10}
+        accessibilityLabel="Back"
+        style={{ paddingHorizontal: 12 }}
+      >
+        <Feather name="arrow-left" size={22} color={color} />
+      </Pressable>
+    );
+  };
 }
 
 export function SectionLabel({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {

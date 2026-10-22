@@ -4,6 +4,7 @@ import type { Transaction } from '@/db/types';
 import { SELECT_HOLD_MS } from '@/hooks/useSelection';
 import { categoryIcon } from '@/lib/categories';
 import { formatMoney } from '@/lib/format';
+import { scaled, useTextScale } from '@/lib/textScale';
 import { colors, radius } from '@/lib/theme';
 
 import { SelectedBadge, selectedStyle } from './SelectionBar';
@@ -20,6 +21,7 @@ export function TransactionRow({
   selected?: boolean;
 }) {
   const income = tx.direction === 'income';
+  const scale = useTextScale();
   return (
     <Pressable
       onPress={onPress}
@@ -32,15 +34,20 @@ export function TransactionRow({
         <Text style={{ fontSize: 20 }}>{categoryIcon(tx.direction, tx.category)}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, { fontSize: scaled(15, scale) }]} numberOfLines={1}>
           {tx.subcategory ?? tx.category}
         </Text>
-        <Text style={styles.meta} numberOfLines={1}>
+        <Text style={[styles.meta, { fontSize: scaled(12, scale) }]} numberOfLines={1}>
           {[tx.subcategory ? tx.category : null, tx.note || null].filter(Boolean).join(' · ') ||
             (income ? 'Income' : 'Expense')}
         </Text>
       </View>
-      <Text style={[styles.amount, { color: income ? colors.income : colors.expense }]}>
+      <Text
+        style={[
+          styles.amount,
+          { color: income ? colors.income : colors.expense, fontSize: scaled(15, scale) },
+        ]}
+      >
         {income ? '+' : '−'}
         {formatMoney(tx.amountCents)}
       </Text>

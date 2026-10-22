@@ -128,13 +128,13 @@ export default function FinanceScreen() {
                 <View style={styles.customField}>
                   <Text style={styles.customLabel}>FROM</Text>
                   <View style={{ flexDirection: 'row' }}>
-                    <DateTimeField mode="date" value={range.from} onChange={setFrom} placeholder="From" />
+                    <DateTimeField mode="date" value={range.from} onChange={setFrom} placeholder="From" label="From" />
                   </View>
                 </View>
                 <View style={styles.customField}>
                   <Text style={styles.customLabel}>TO</Text>
                   <View style={{ flexDirection: 'row' }}>
-                    <DateTimeField mode="date" value={range.to} onChange={setTo} placeholder="To" />
+                    <DateTimeField mode="date" value={range.to} onChange={setTo} placeholder="To" label="To" />
                   </View>
                 </View>
               </View>
@@ -200,7 +200,7 @@ export default function FinanceScreen() {
                 ? selection.toggle(item.id)
                 : router.push({ pathname: '/transaction/[id]', params: { id: item.id } })
             }
-            onLongPress={() => selection.toggle(item.id)}
+            onLongPress={() => selection.begin(item.id)}
           />
         )}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}

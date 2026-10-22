@@ -1,4 +1,5 @@
 import { usePreventRemove } from 'expo-router';
+import { useEffect, useRef } from 'react';
 
 import { confirmDestructive } from '@/lib/dialogs';
 
@@ -8,6 +9,7 @@ import { confirmDestructive } from '@/lib/dialogs';
  * screens call right before navigating away on purpose (after saving or deleting).
  */
 export function useUnsavedChangesGuard(dirty: boolean, what: string) {
+  const allowRef = useRef<() => void>(() => {});
   const allowLeave = usePreventRemove(dirty, async ({ repeat }) => {
     const discard = await confirmDestructive(
       'Discard changes?',
@@ -15,9 +17,12 @@ export function useUnsavedChangesGuard(dirty: boolean, what: string) {
       'Discard',
     );
     if (discard) {
-      allowLeave();
+      allowRef.current();
       repeat();
     }
   });
+  useEffect(() => {
+    allowRef.current = allowLeave;
+  }, [allowLeave]);
   return allowLeave;
 }

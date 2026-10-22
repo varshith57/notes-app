@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -16,14 +17,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateTimeField } from '@/components/DateTimeField';
-import { Chip, SectionLabel, Segmented, webHeaderLeft } from '@/components/ui';
+import { Chip, SectionLabel, webHeaderLeft } from '@/components/ui';
 import { getTask } from '@/db/tasksRepo';
-import type { Priority, Task, TaskKind } from '@/db/types';
+import type { Priority, Task } from '@/db/types';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
 import { toHHMM, toISODate } from '@/lib/format';
 import type { ScheduleError } from '@/lib/reminders';
+import { scaled, useTextScale } from '@/lib/textScale';
 import { removeTask, saveTask } from '@/lib/taskActions';
 import { colors, gradient, PRIORITY_COLORS, radius } from '@/lib/theme';
 
@@ -33,7 +35,7 @@ const REMINDER_ERRORS: Record<ScheduleError, string> = {
   unsupported: 'Reminder notifications only work in the phone app, not in the web preview.',
 };
 
-/** Default slot for new reminders/agenda items: the top of the next hour (tomorrow after 11 pm). */
+/** Default slot for new timed tasks: the top of the next hour (tomorrow after 11 pm). */
 function nextHourSlot(): { date: string; time: string } {
   const d = new Date();
   d.setHours(d.getHours() + 1, 0, 0, 0);
@@ -43,30 +45,36 @@ function nextHourSlot(): { date: string; time: string } {
 export default function TaskEditorScreen() {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id: string; kind?: TaskKind; date?: string }>();
+  // `preset` comes from the Tasks view the + was tapped in: Agenda pre-fills the selected
+  // day and a time, Reminders pre-fills the next hour; To-do starts undated.
+  const params = useLocalSearchParams<{
+    id: string;
+    preset?: 'todo' | 'agenda' | 'reminder';
+    date?: string;
+  }>();
   const isNew = params.id === 'new';
   const taskId = isNew ? null : Number(params.id);
-  const initialKind = params.kind ?? 'todo';
+  const timed = params.preset === 'agenda' || params.preset === 'reminder';
 
+  const scale = useTextScale();
   const [loaded, setLoaded] = useState(isNew);
   const [existing, setExisting] = useState<Task | null>(null);
-  const [kind, setKind] = useState<TaskKind>(initialKind);
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [dueOn, setDueOn] = useState<string | null>(
-    params.date ?? (initialKind === 'todo' ? null : nextHourSlot().date),
+    params.date ?? (timed ? nextHourSlot().date : null),
   );
-  const [dueTime, setDueTime] = useState<string | null>(
-    initialKind === 'todo' ? null : nextHourSlot().time,
-  );
+  const [dueTime, setDueTime] = useState<string | null>(timed ? nextHourSlot().time : null);
   const [endTime, setEndTime] = useState<string | null>(null);
+  // On by default: it only takes effect once the task has a date and a time.
+  const [remind, setRemind] = useState(true);
   const [priority, setPriority] = useState<Priority>('medium');
 
   // Unsaved-changes guard: compare the form with what was loaded (or the blank form).
-  const form = JSON.stringify([kind, title, details, dueOn, dueTime, endTime, priority]);
-  const pristine = useRef<string | null>(isNew ? form : null);
+  const form = JSON.stringify([title, details, dueOn, dueTime, endTime, remind, priority]);
+  const [pristine, setPristine] = useState<string | null>(isNew ? form : null);
   const allowLeave = useUnsavedChangesGuard(
-    loaded && pristine.current !== null && form !== pristine.current,
+    loaded && pristine !== null && form !== pristine,
     'this task',
   );
 
@@ -75,34 +83,27 @@ export default function TaskEditorScreen() {
     getTask(db, taskId).then((t) => {
       if (!t) return leaveTo('/tasks');
       setExisting(t);
-      setKind(t.kind);
       setTitle(t.title);
       setDetails(t.details);
       setDueOn(t.dueOn);
       setDueTime(t.dueTime);
       setEndTime(t.endTime);
+      setRemind(t.remind);
       setPriority(t.priority);
-      pristine.current = JSON.stringify([
-        t.kind,
-        t.title,
-        t.details,
-        t.dueOn,
-        t.dueTime,
-        t.endTime,
-        t.priority,
-      ]);
+      setPristine(
+          JSON.stringify([
+          t.title,
+          t.details,
+          t.dueOn,
+          t.dueTime,
+          t.endTime,
+          t.remind,
+          t.priority,
+      ]),
+      );
       setLoaded(true);
     });
   }, [db, taskId]);
-
-  const changeKind = (k: TaskKind) => {
-    setKind(k);
-    // Agenda items and reminders always need a day and a time.
-    if (k !== 'todo') {
-      setDueOn((d) => d ?? nextHourSlot().date);
-      setDueTime((t) => t ?? nextHourSlot().time);
-    }
-  };
 
   const doSave = async () => {
     if (!title.trim()) return showMessage('Add a title');
@@ -111,12 +112,12 @@ export default function TaskEditorScreen() {
     }
 
     const result = await saveTask(db, taskId, {
-      kind,
       title: title.trim(),
       details: details.trim(),
       dueOn,
       dueTime: dueOn ? dueTime : null,
-      endTime: kind === 'agenda' && dueOn ? endTime : null,
+      endTime: dueOn && dueTime ? endTime : null,
+      remind,
       priority,
     });
     emitDataChanged('tasks');
@@ -151,7 +152,7 @@ export default function TaskEditorScreen() {
 
   if (!loaded) return null;
 
-  const needsDate = kind !== 'todo';
+  const canRemind = dueOn != null && dueTime != null;
 
   return (
     <KeyboardAvoidingView
@@ -172,21 +173,9 @@ export default function TaskEditorScreen() {
         }}
       />
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-        <Segmented
-          value={kind}
-          onChange={changeKind}
-          options={[
-            { value: 'todo', label: 'To-do', icon: 'check-square' },
-            { value: 'agenda', label: 'Agenda', icon: 'calendar' },
-            { value: 'reminder', label: 'Reminder', icon: 'bell' },
-          ]}
-        />
-
         <TextInput
-          style={styles.title}
-          placeholder={
-            kind === 'reminder' ? 'Remind me to…' : kind === 'agenda' ? 'What’s planned?' : 'What needs doing?'
-          }
+          style={[styles.title, { fontSize: scaled(22, scale) }]}
+          placeholder="What needs doing?"
           placeholderTextColor={colors.placeholder}
           value={title}
           onChangeText={setTitle}
@@ -194,16 +183,17 @@ export default function TaskEditorScreen() {
           multiline
         />
 
-        <SectionLabel>{needsDate ? 'WHEN' : 'DUE (OPTIONAL)'}</SectionLabel>
+        <SectionLabel>WHEN (OPTIONAL)</SectionLabel>
         <View style={styles.row}>
           <DateTimeField
             mode="date"
             value={dueOn}
             onChange={setDueOn}
-            placeholder="No date"
-            onClear={needsDate ? undefined : () => {
+            placeholder="Add a date"
+            onClear={() => {
               setDueOn(null);
               setDueTime(null);
+              setEndTime(null);
             }}
           />
         </View>
@@ -212,26 +202,52 @@ export default function TaskEditorScreen() {
             <DateTimeField
               mode="time"
               value={dueTime}
-              onChange={setDueTime}
-              placeholder={kind === 'agenda' ? 'Start time' : 'Time'}
-              onClear={needsDate ? undefined : () => setDueTime(null)}
+              onChange={(t) => {
+                setDueTime(t);
+                if (endTime && endTime <= t) setEndTime(null);
+              }}
+              placeholder="Add a time"
+              onClear={() => {
+                setDueTime(null);
+                setEndTime(null);
+              }}
             />
-            {kind === 'agenda' && (
+            {dueTime && (
               <DateTimeField
                 mode="time"
                 value={endTime}
                 onChange={setEndTime}
                 placeholder="End time"
+                label="End time"
                 onClear={() => setEndTime(null)}
               />
             )}
           </View>
         )}
-        {kind === 'reminder' && (
-          <Text style={styles.hint}>
-            <Feather name="bell" size={12} /> You’ll get a notification at this time.
-          </Text>
-        )}
+
+        <View style={[styles.remindRow, !canRemind && { opacity: 0.5 }]}>
+          <Feather name="bell" size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.remindTitle}>Remind me</Text>
+            <Text style={styles.hint}>
+              {canRemind
+                ? remind
+                  ? 'You’ll get a notification at this time.'
+                  : 'No notification for this task.'
+                : 'Add a date and time to get a notification.'}
+            </Text>
+          </View>
+          <Switch
+            value={remind && canRemind}
+            onValueChange={setRemind}
+            disabled={!canRemind}
+            trackColor={{ true: colors.primary, false: colors.border }}
+            thumbColor={colors.background}
+            // React Native Web uses its own (teal) knob colour when on unless told otherwise.
+            {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.background } as object) : {})}
+            accessibilityLabel="Remind me"
+          />
+        </View>
 
         <SectionLabel>PRIORITY</SectionLabel>
         <View style={styles.row}>
@@ -248,7 +264,7 @@ export default function TaskEditorScreen() {
 
         <SectionLabel>NOTES</SectionLabel>
         <TextInput
-          style={styles.details}
+          style={[styles.details, { fontSize: scaled(15, scale) }]}
           placeholder="Add details, links, a checklist…"
           placeholderTextColor={colors.muted}
           value={details}
@@ -274,6 +290,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', color: colors.text, paddingVertical: 8 },
   row: { flexDirection: 'row', gap: 10 },
   hint: { fontSize: 12, color: colors.muted },
+  remindRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  remindTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
   details: {
     minHeight: 120,
     backgroundColor: colors.surface,

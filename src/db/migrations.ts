@@ -72,6 +72,24 @@ const MIGRATIONS: string[] = [
     ELSE color
   END;
   `,
+  // v3: tasks are no longer split into to-do / agenda / reminder types, which kept the
+  // three views out of sync. One task can be dated, timed and/or remind you; the views
+  // are just filters. Anything that already had a date and time now reminds.
+  `
+  ALTER TABLE tasks ADD COLUMN remind INTEGER NOT NULL DEFAULT 0;
+  UPDATE tasks SET remind = 1 WHERE due_on IS NOT NULL AND due_time IS NOT NULL;
+  DROP INDEX idx_tasks_kind_due;
+  ALTER TABLE tasks DROP COLUMN kind;
+  CREATE INDEX idx_tasks_due ON tasks (done, due_on, due_time);
+  `,
+  // v4: small key/value store for app state (Google backup account, last backup, onboarding).
+  // Not part of backups.
+  `
+  CREATE TABLE app_settings (
+    key   TEXT PRIMARY KEY NOT NULL,
+    value TEXT
+  );
+  `,
 ];
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {

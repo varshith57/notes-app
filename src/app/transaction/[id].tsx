@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -57,9 +57,9 @@ export default function TransactionEditorScreen() {
 
   // Unsaved-changes guard: compare the form with what was loaded (or the blank form).
   const form = JSON.stringify([direction, amount, category, subcategory, occurredOn, note]);
-  const pristine = useRef<string | null>(isNew ? form : null);
+  const [pristine, setPristine] = useState<string | null>(isNew ? form : null);
   const allowLeave = useUnsavedChangesGuard(
-    loaded && pristine.current !== null && form !== pristine.current,
+    loaded && pristine !== null && form !== pristine,
     'this entry',
   );
 
@@ -74,25 +74,32 @@ export default function TransactionEditorScreen() {
       setSubcategory(tx.subcategory);
       setOccurredOn(tx.occurredOn);
       setNote(tx.note);
-      pristine.current = JSON.stringify([
-        tx.direction,
-        centsToInput(tx.amountCents),
-        tx.category,
-        tx.subcategory,
-        tx.occurredOn,
-        tx.note,
-      ]);
+      setPristine(
+          JSON.stringify([
+          tx.direction,
+          centsToInput(tx.amountCents),
+          tx.category,
+          tx.subcategory,
+          tx.occurredOn,
+          tx.note,
+      ]),
+      );
       setLoaded(true);
     });
   }, [db, txId]);
 
-  const loadCustom = useCallback(async () => {
-    setCustom(category ? await listCustomSubcategories(db, direction, category) : []);
-  }, [db, direction, category]);
-
+  // Bumped after adding/removing a custom subcategory to reload the list.
+  const [customVersion, setCustomVersion] = useState(0);
+  const loadCustom = () => setCustomVersion((v) => v + 1);
   useEffect(() => {
-    loadCustom();
-  }, [loadCustom]);
+    let alive = true;
+    (category ? listCustomSubcategories(db, direction, category) : Promise.resolve([])).then(
+      (list) => alive && setCustom(list),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [db, direction, category, customVersion]);
 
   const switchDirection = (d: Direction) => {
     if (d === direction) return;
@@ -112,7 +119,7 @@ export default function TransactionEditorScreen() {
     const name = newSub.trim();
     if (!name || !category) return;
     await addCustomSubcategory(db, direction, category, name);
-    await loadCustom();
+    loadCustom();
     setSubcategory(name);
     setNewSub('');
     setAdding(false);

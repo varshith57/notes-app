@@ -1,9 +1,14 @@
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 
-/** How long an item must be held to start multi-select. */
-export const SELECT_HOLD_MS = 2000;
+/**
+ * How long an item must be held to start multi-select. Standard long-press length: on a
+ * real screen a finger drifts a few px while holding, and any drift past the touch slop
+ * turns the press into a scroll — so multi-second holds rarely survive on phones.
+ */
+export const SELECT_HOLD_MS = 600;
 
 /**
  * Multi-select state for a list. Holding an item starts selection; while selecting,
@@ -21,6 +26,17 @@ export function useSelection() {
     });
   }, []);
 
+  /** Long-press handler: a short buzz confirms selection started, then toggles the item. */
+  const begin = useCallback(
+    (id: number) => {
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
+      toggle(id);
+    },
+    [toggle],
+  );
+
   const clear = useCallback(() => setSelected(new Set()), []);
   const selectAll = useCallback((ids: number[]) => setSelected(new Set(ids)), []);
   const selecting = selected.size > 0;
@@ -37,7 +53,7 @@ export function useSelection() {
     }, [selecting, clear]),
   );
 
-  return { selected, selecting, toggle, clear, selectAll };
+  return { selected, selecting, toggle, begin, clear, selectAll };
 }
 
 export type Selection = ReturnType<typeof useSelection>;

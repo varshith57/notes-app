@@ -2,14 +2,14 @@ import { useState, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 /**
- * Legal-pad background: horizontal rules every `lineHeight` px starting at `top`, plus a
+ * Legal-pad background: horizontal rules every `lineHeight` px, the first at `firstRule`, plus a
  * double margin line on the left. Render it as the ScrollView's content so the rules
  * scroll with the text. Children must stack in multiples of `lineHeight` (set each text
  * element's lineHeight to it, with no vertical margins) for the writing to sit on the lines.
  */
 export function RuledPaper({
   lineHeight,
-  top,
+  firstRule,
   marginX,
   lineColor,
   marginColor,
@@ -17,7 +17,8 @@ export function RuledPaper({
   children,
 }: {
   lineHeight: number;
-  top: number;
+  /** y (from the paper's top) of the first rule; the rest follow every `lineHeight`. */
+  firstRule: number;
   marginX: number;
   lineColor: string;
   marginColor: string;
@@ -25,7 +26,7 @@ export function RuledPaper({
   children: ReactNode;
 }) {
   const [height, setHeight] = useState(0);
-  const count = Math.max(0, Math.ceil((height - top) / lineHeight));
+  const count = Math.max(0, Math.ceil((height - firstRule) / lineHeight));
 
   return (
     <View style={style} onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
@@ -33,7 +34,7 @@ export function RuledPaper({
         {Array.from({ length: count }, (_, i) => (
           <View
             key={i}
-            style={[styles.rule, { top: top + lineHeight * (i + 1) - 1, backgroundColor: lineColor }]}
+            style={[styles.rule, { top: firstRule + lineHeight * i, backgroundColor: lineColor }]}
           />
         ))}
         <View style={[styles.margin, { left: marginX, backgroundColor: marginColor }]} />

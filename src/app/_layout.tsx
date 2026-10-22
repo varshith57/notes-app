@@ -1,13 +1,16 @@
-import '@/lib/reminders'; // registers the foreground notification handler
 import '@/lib/webStyles'; // removes the browser focus ring around text fields
 
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
-import { SQLiteProvider } from 'expo-sqlite';
+import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SystemNavBar } from '@/components/SystemNavBar';
 import { DATABASE_NAME, migrateDbIfNeeded } from '@/db/migrations';
-import { useOpenTaskFromReminder } from '@/lib/reminders';
+import '@/lib/reminders'; // registers the foreground notification handler
+import { initTextScale } from '@/lib/textScale';
+import { useOpenTaskFromReminder } from '@/lib/useOpenTaskFromReminder';
 import { colors, radius } from '@/lib/theme';
 
 const editorKey = (_name: string, params: { id?: string | string[] }) => String(params.id);
@@ -16,7 +19,13 @@ export default function RootLayout() {
   useOpenTaskFromReminder();
 
   return (
-    <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
+    <SQLiteProvider
+      databaseName={DATABASE_NAME}
+      onInit={migrateDbIfNeeded}
+      // Lets Google backup notice every write (see lib/sync.ts).
+      options={{ enableChangeListener: true }}
+    >
+      <LoadPreferences />
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -40,9 +49,24 @@ export default function RootLayout() {
           dangerouslySingular={editorKey}
         />
         <Stack.Screen name="task/[id]" options={{ title: 'Task' }} dangerouslySingular={editorKey} />
+        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen
+          name="welcome"
+          options={{ headerShown: false, presentation: 'fullScreenModal' }}
+        />
       </Stack>
+      <SystemNavBar />
     </SQLiteProvider>
   );
+}
+
+/** Loads saved preferences (text size) as soon as the database is ready, on any screen. */
+function LoadPreferences() {
+  const db = useSQLiteContext();
+  useEffect(() => {
+    initTextScale(db).catch(() => {});
+  }, [db]);
+  return null;
 }
 
 /** Shown instead of a blank screen if a screen crashes; data on the device is untouched. */

@@ -1,4 +1,5 @@
-# Tasks: to-do (validation, done toggle, update), reminder, agenda, bulk delete.
+# Tasks: one list, three views (To-do = all, Agenda = by day, Reminders = will notify).
+# Checks that a task created in any view shows up in the others it belongs to.
 appId: com.varshith.mynotes
 name: Tasks
 ---
@@ -23,45 +24,39 @@ name: Tasks
 - assertVisible: 'Mark "Maestro todo" not done'
 - tapOn: 'Mark "Maestro todo" not done'
 
-# Update.
-- tapOn: 'Maestro todo'
-- tapOn: 'Maestro todo'
-- eraseText
-- inputText: 'Maestro todo edited'
-- hideKeyboard
-- tapOn: 'Update'
-- assertVisible: 'Maestro todo edited'
-
-# Reminder (notification permission granted at launch).
+# An undated to-do is not on the agenda and doesn't remind.
 - tapOn: 'Reminders'
-- tapOn: 'Add task'
-- tapOn: 'Remind me to…'
-- inputText: 'Maestro reminder'
-- hideKeyboard
-- tapOn: 'Save'
-- assertVisible: 'Maestro reminder'
+- assertNotVisible: 'Maestro todo'
 
-# Agenda on today.
+# Agenda item at a time → also in To-do and Reminders (reminder is on by default).
 - tapOn: 'Agenda'
 - tapOn: 'Add task'
-- tapOn: 'What’s planned\?'
-- inputText: 'Maestro agenda'
+- tapOn: 'What needs doing\?'
+- inputText: 'Maestro meeting'
 - hideKeyboard
+- assertVisible: 'You’ll get a notification at this time.'
 - tapOn: 'Save'
-- assertVisible: 'Maestro agenda'
-
-# Bulk delete in each view.
-- longPressOn: 'Maestro agenda'
-- tapOn: 'Delete 1 selected'
-- tapOn: 'Delete'
-- assertNotVisible: 'Maestro agenda'
+- assertVisible: 'Maestro meeting'
 - tapOn: 'Reminders'
-- longPressOn: 'Maestro reminder'
-- tapOn: 'Delete 1 selected'
-- tapOn: 'Delete'
-- assertNotVisible: 'Maestro reminder'
+- assertVisible: 'Maestro meeting'
 - tapOn: 'To-do'
-- longPressOn: 'Maestro todo edited'
-- tapOn: 'Delete 1 selected'
+- assertVisible: 'Maestro meeting'
+
+# Switching the reminder off removes it from Reminders but keeps it on the agenda.
+- tapOn: 'Maestro meeting'
+- tapOn: 'Remind me'
+- tapOn: 'Update'
+- tapOn: 'Reminders'
+- assertNotVisible: 'Maestro meeting'
+- tapOn: 'Agenda'
+- assertVisible: 'Maestro meeting'
+
+# Bulk delete from the To-do view removes them everywhere.
+- tapOn: 'To-do'
+- longPressOn: 'Maestro todo'
+- tapOn: 'Maestro meeting'
+- tapOn: 'Delete 2 selected'
 - tapOn: 'Delete'
 - assertVisible: 'All clear'
+- tapOn: 'Agenda'
+- assertNotVisible: 'Maestro meeting'

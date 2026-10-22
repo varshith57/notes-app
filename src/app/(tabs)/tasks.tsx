@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useState, type ComponentProps } from 'react';
+import { useCallback, useState, type ComponentProps } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +10,7 @@ import { TaskRow } from '@/components/TaskRow';
 import { WeekStrip, weekOf } from '@/components/WeekStrip';
 import { EmptyState, Fab, ScreenTitle, Segmented } from '@/components/ui';
 import { listBusyDays, listForDay, listReminders, listTodos } from '@/db/tasksRepo';
-import type { Task, TaskKind } from '@/db/types';
+import type { Task } from '@/db/types';
 import { useSelection } from '@/hooks/useSelection';
 import { emitDataChanged, onDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive } from '@/lib/dialogs';
@@ -18,7 +18,10 @@ import { formatLongDate, formatTime, fromISODate, todayISO } from '@/lib/format'
 import { removeTasks, toggleTaskDone } from '@/lib/taskActions';
 import { colors, radius } from '@/lib/theme';
 
-const EMPTY: Record<TaskKind, { title: string; hint: string }> = {
+/** Three views of the same tasks: all of them, by day, and the ones that will notify. */
+type TaskView = 'todo' | 'agenda' | 'reminder';
+
+const EMPTY: Record<TaskView, { title: string; hint: string }> = {
   todo: { title: 'All clear', hint: 'Tap + to add something to your to-do list.' },
   agenda: { title: 'Nothing planned', hint: 'Tap + to block time on this day.' },
   reminder: { title: 'No reminders', hint: 'Tap + to get a notification at the right time.' },
@@ -26,8 +29,8 @@ const EMPTY: Record<TaskKind, { title: string; hint: string }> = {
 
 export default function TasksScreen() {
   const db = useSQLiteContext();
-  const params = useLocalSearchParams<{ view?: TaskKind }>();
-  const [view, setView] = useState<TaskKind>(params.view ?? 'todo');
+  const params = useLocalSearchParams<{ view?: TaskView }>();
+  const [view, setView] = useState<TaskView>(params.view ?? 'todo');
   const [day, setDay] = useState(todayISO());
   const [showDone, setShowDone] = useState(false);
   const [items, setItems] = useState<Task[]>([]);
@@ -35,10 +38,12 @@ export default function TasksScreen() {
   const selection = useSelection();
   const { clear: clearSelection } = selection;
 
-  // Home screen shortcuts deep-link into a specific view.
-  useEffect(() => {
+  // Home screen shortcuts deep-link into a specific view: follow the param when it changes.
+  const [seenParam, setSeenParam] = useState(params.view);
+  if (params.view !== seenParam) {
+    setSeenParam(params.view);
     if (params.view) setView(params.view);
-  }, [params.view]);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -125,7 +130,7 @@ export default function TasksScreen() {
             selected: selection.selected.has(item.id),
             onPress: selection.selecting ? select : () => open(item),
             onToggle: selection.selecting ? select : () => toggle(item),
-            onLongPress: select,
+            onLongPress: () => selection.begin(item.id),
           };
           return view === 'agenda' ? <AgendaItem {...rowProps} /> : <TaskRow {...rowProps} />;
         }}
@@ -144,7 +149,8 @@ export default function TasksScreen() {
           onPress={() =>
             router.push({
               pathname: '/task/[id]',
-              params: { id: 'new', kind: view, ...(view === 'agenda' ? { date: day } : {}) },
+              // Pre-fill from the current view: a time on the selected day, or a reminder slot.
+              params: { id: 'new', preset: view, ...(view === 'agenda' ? { date: day } : {}) },
             })
           }
         />

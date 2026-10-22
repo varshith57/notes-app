@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Note } from '@/db/types';
 import { SELECT_HOLD_MS } from '@/hooks/useSelection';
 import { formatTimestamp } from '@/lib/format';
+import { scaled, useTextScale } from '@/lib/textScale';
 import { colors, noteTone, radius } from '@/lib/theme';
 
 import { SelectedBadge, selectedStyle } from './SelectionBar';
@@ -20,6 +21,7 @@ export function NoteCard({
   selected?: boolean;
 }) {
   const tone = noteTone(note.color);
+  const scale = useTextScale();
   const preview = note.body.trim();
 
   return (
@@ -36,19 +38,30 @@ export function NoteCard({
     >
       {selected && <SelectedBadge />}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: tone.text }]} numberOfLines={1}>
+        <Text
+          style={[styles.title, { color: tone.text, fontSize: scaled(18, scale) }]}
+          numberOfLines={1}
+        >
           {note.title || preview.split('\n')[0] || 'Untitled'}
         </Text>
         {note.pinned && <Feather name="bookmark" size={16} color={tone.accent} />}
       </View>
       {!!preview && !!note.title && (
-        <Text style={[styles.body, { color: tone.muted }]} numberOfLines={3}>
+        <Text
+          style={[
+            styles.body,
+            { color: tone.muted, fontSize: scaled(14, scale), lineHeight: scaled(20, scale) },
+          ]}
+          numberOfLines={3}
+        >
           {preview}
         </Text>
       )}
       <View style={[styles.pill, { backgroundColor: tone.accent }]}>
         <Feather name="calendar" size={11} color={tone.onAccent} />
-        <Text style={[styles.pillText, { color: tone.onAccent }]}>{formatTimestamp(note.updatedAt)}</Text>
+        <Text style={[styles.pillText, { color: tone.onAccent }]}>
+          {formatTimestamp(note.updatedAt)}
+        </Text>
       </View>
     </Pressable>
   );

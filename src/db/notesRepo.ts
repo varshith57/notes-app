@@ -26,15 +26,23 @@ function toNote(row: NoteRow): Note {
   };
 }
 
-export async function listNotes(db: SQLiteDatabase, search = '', limit = -1): Promise<Note[]> {
+/** Notes matching `search` (title or body) and, if given, one colour. Pinned first. */
+export async function listNotes(
+  db: SQLiteDatabase,
+  search = '',
+  limit = -1,
+  color: NoteColor | null = null,
+): Promise<Note[]> {
   const like = `%${search.trim()}%`;
   const rows = await db.getAllAsync<NoteRow>(
     `SELECT * FROM notes
-     WHERE title LIKE ? OR body LIKE ?
+     WHERE (title LIKE ? OR body LIKE ?) AND (? IS NULL OR color = ?)
      ORDER BY pinned DESC, updated_at DESC
      LIMIT ?`,
     like,
     like,
+    color,
+    color,
     limit,
   );
   return rows.map(toNote);

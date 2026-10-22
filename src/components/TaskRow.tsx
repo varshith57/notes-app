@@ -1,14 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { Task } from '@/db/types';
+import { hasReminder, type Task } from '@/db/types';
 import { SELECT_HOLD_MS } from '@/hooks/useSelection';
 import { formatDay, formatTime, todayISO } from '@/lib/format';
+import { scaled, useTextScale } from '@/lib/textScale';
 import { colors, PRIORITY_COLORS, radius } from '@/lib/theme';
 
 import { SelectedBadge, selectedStyle } from './SelectionBar';
-
-const KIND_ICON = { todo: 'check-square', agenda: 'calendar', reminder: 'bell' } as const;
 
 export function TaskRow({
   task,
@@ -25,6 +24,7 @@ export function TaskRow({
   selected?: boolean;
   showDate?: boolean;
 }) {
+  const scale = useTextScale();
   const overdue = !task.done && task.dueOn != null && task.dueOn < todayISO();
   const when = [
     showDate && task.dueOn ? formatDay(task.dueOn) : null,
@@ -52,13 +52,29 @@ export function TaskRow({
         {task.done && <Feather name="check" size={15} color={colors.onPrimary} />}
       </Pressable>
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={[styles.title, task.done && styles.titleDone]} numberOfLines={2}>
+        <Text
+          style={[styles.title, { fontSize: scaled(15, scale) }, task.done && styles.titleDone]}
+          numberOfLines={2}
+        >
           {task.title}
         </Text>
-        {(!!when || task.kind !== 'todo') && (
+        {!!when && (
           <View style={styles.metaRow}>
-            <Feather name={KIND_ICON[task.kind]} size={12} color={overdue ? colors.danger : colors.muted} />
-            {!!when && <Text style={[styles.meta, overdue && { color: colors.danger }]}>{when}</Text>}
+            <Feather name="calendar" size={12} color={overdue ? colors.danger : colors.muted} />
+            <Text
+              style={[styles.meta, { fontSize: scaled(12, scale) }, overdue && { color: colors.danger }]}
+            >
+              {when}
+            </Text>
+            {hasReminder(task) && (
+              <Feather
+                name="bell"
+                size={12}
+                color={colors.primary}
+                accessibilityLabel="Reminder on"
+                style={{ marginLeft: 4 }}
+              />
+            )}
           </View>
         )}
       </View>

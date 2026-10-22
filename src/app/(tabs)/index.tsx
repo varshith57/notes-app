@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NoteCard } from '@/components/NoteCard';
 import { TAB_BAR_SPACE } from '@/components/TabBar';
 import { TaskRow } from '@/components/TaskRow';
-import { GradientProgress, SectionLabel } from '@/components/ui';
+import { GradientProgress, IconButton, SectionLabel } from '@/components/ui';
 import { getFinanceSummary } from '@/db/financeRepo';
 import { listNotes } from '@/db/notesRepo';
 import { getTaskStats, listUpcoming } from '@/db/tasksRepo';
@@ -60,7 +60,10 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.hello}>{greeting()} 👋</Text>
+        <View style={styles.topRow}>
+          <Text style={styles.hello}>{greeting()} 👋</Text>
+          <IconButton icon="settings" label="Settings" onPress={() => router.push('/settings')} />
+        </View>
         <Text style={styles.title}>My Space</Text>
         <Text style={styles.date}>Today, {formatLongDate(new Date())}</Text>
 
@@ -75,7 +78,7 @@ export default function HomeScreen() {
             colors={goldGradient}
             ink={colors.text}
             label="New Task"
-            onPress={() => router.push({ pathname: '/task/[id]', params: { id: 'new', kind: 'todo' } })}
+            onPress={() => router.push({ pathname: '/task/[id]', params: { id: 'new' } })}
           />
         </View>
 
@@ -197,6 +200,7 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll: () => voi
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: TAB_BAR_SPACE + 20 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   hello: { fontSize: 15, color: colors.muted },
   title: { fontSize: 32, fontWeight: '800', color: colors.text, marginTop: 8, letterSpacing: -0.5 },
   date: { fontSize: 15, color: colors.text, marginTop: 4 },

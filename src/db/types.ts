@@ -39,23 +39,21 @@ export interface FinanceSummary {
 export type Priority = 'low' | 'medium' | 'high';
 
 /**
- * - todo: a checklist item, optionally dated.
- * - agenda: a time-blocked item on a specific day (start/end time).
- * - reminder: a dated, timed item that fires a local notification.
+ * One task shows up in every view it belongs to: To-do lists them all, Agenda shows those
+ * dated on the selected day, Reminders shows those that will notify you.
  */
-export type TaskKind = 'todo' | 'agenda' | 'reminder';
-
 export interface Task {
   id: number;
-  kind: TaskKind;
   title: string;
   details: string;
   /** YYYY-MM-DD */
   dueOn: string | null;
   /** HH:MM, 24h */
   dueTime: string | null;
-  /** HH:MM, agenda items only */
+  /** HH:MM, optional end for a time block */
   endTime: string | null;
+  /** Notify at dueOn + dueTime (only takes effect when both are set). */
+  remind: boolean;
   priority: Priority;
   done: boolean;
   completedAt: string | null;
@@ -66,5 +64,9 @@ export interface Task {
 
 export type TaskInput = Pick<
   Task,
-  'kind' | 'title' | 'details' | 'dueOn' | 'dueTime' | 'endTime' | 'priority'
+  'title' | 'details' | 'dueOn' | 'dueTime' | 'endTime' | 'remind' | 'priority'
 >;
+
+/** A task will notify when it's switched on and has both a date and a time. */
+export const hasReminder = (t: Pick<Task, 'remind' | 'dueOn' | 'dueTime'>) =>
+  t.remind && t.dueOn != null && t.dueTime != null;

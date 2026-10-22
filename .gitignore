@@ -46,3 +46,6 @@ yarn-error.*
 *.p12
 *.jks
 *.keystore
+
+# Local environment (Google client IDs etc.)
+.env
