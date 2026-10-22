@@ -54,7 +54,7 @@ It writes:
 
 ### 0.4 Privacy policy URL (both stores require one)
 
-1. Fill in the placeholders in [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+1. Check [PRIVACY_POLICY.md](PRIVACY_POLICY.md) still matches the app (it covers local storage, reminders and the optional Google Drive backup).
 2. Host it at a public URL. Easy free options: a GitHub Pages site, a public Notion page, or Google Sites.
 3. Keep the URL handy. Both stores ask for it.
 
@@ -115,12 +115,12 @@ eas build --platform android --profile production
 | Section | What to answer for this app |
 |---|---|
 | **Privacy policy** | Your hosted URL from 0.4 |
-| **App access** | "All functionality is available without special access" (there's no login) |
+| **App access** | "All functionality is available without special access" (Google sign-in is optional and only turns on backup) |
 | **Ads** | No, the app has no ads |
 | **Content rating** | Fill the IARC questionnaire. Category: *Utility/Productivity*. Answer "No" to violence and similar. Expect a rating of Everyone / PEGI 3. |
 | **Target audience** | 18+ (or 13+). Avoid "under 13", which triggers the Families policy. |
 | **News app** | No |
-| **Data safety** | **"Does your app collect or share any of the required user data types?" → No.** All data stays on the device and is never transmitted. Encryption in transit isn't applicable because nothing is transmitted. |
+| **Data safety** | Because the optional Google Drive backup sends data off the phone, answer **"Does your app collect or share any of the required user data types?" → Yes**, then: **Encrypted in transit: Yes** (HTTPS to Google). **Users can request deletion: Yes** (in the app, plus *Delete hidden app data* in Drive). Data types, each marked **Collected, not shared, optional, purpose: App functionality / Account management**: *Personal info → Email address* (shown in Settings), *Financial info → Other financial info* (finance entries), *App activity → Other user-generated content* (notes and tasks). If you ship a build without the Google client IDs (backup off), answer **No** instead: then nothing leaves the device. |
 | **Government app** | No |
 | **Financial features** | Declare that the app is a personal expense/budget tracker that does **not** provide loans, banking, payments, trading or crypto. Pick the option that matches. |
 | **Health** | No health features |
@@ -226,19 +226,19 @@ Sign in with your Apple ID when asked. EAS creates an **App Store Connect API ke
 
 | Item | Requirement / suggestion |
 |---|---|
-| **Screenshots** | Required for **6.9" iPhone** (1320×2868 or 1290×2796). Apple scales these down for smaller phones. Because `supportsTablet: true`, **13" iPad** screenshots (2064×2752) are also required. If you don't want to support iPad, set `"supportsTablet": false` in app.json. 3–10 per size. |
+| **Screenshots** | Required for **6.9" iPhone** (1320×2868 or 1290×2796). Apple scales these down for smaller phones. `supportsTablet` is `false`, so no iPad screenshots are needed (iPads run the iPhone version). 3–10 per size. |
 | **Promotional text** | ≤170 chars, editable any time |
 | **Description** | ≤4000 chars |
 | **Keywords** | ≤100 chars, comma-separated, e.g. `notes,journal,expense,budget,todo,reminder,planner,agenda,tasks` |
 | **Support URL** | Required. Can be the same site that hosts your privacy policy. |
 | **Build** | Select the build you uploaded |
-| **App Review Information** | Contact info. **Sign-in required: No.** Notes for the reviewer, e.g. "All data is stored locally. No account needed. Reminders use local notifications." |
+| **App Review Information** | Contact info. **Sign-in required: No.** Notes for the reviewer, e.g. "All data is stored locally. No account needed. Google sign-in is optional and only backs up to the user's own Drive app data folder. Reminders use local notifications." |
 | **Version release** | Manual or automatic after approval |
 
 ### B6. App Privacy and other required sections (App Store Connect → App Privacy, App Information)
 
 - **Privacy Policy URL**: your hosted URL.
-- **Data collection** → **"No, we do not collect data from this app."** Apple defines "collect" as transmitting data off the device. This app doesn't, so the label will read **"Data Not Collected"**.
+- **Data collection** → **"No, we do not collect data from this app."** Apple counts data as collected only when you or your partners can access it. Here the optional backup goes straight to the user's own Google Drive, which you can't read, so the label reads **"Data Not Collected"**. To be extra cautious, declare *User Content* and *Financial Info* as collected for App Functionality, not linked to tracking.
 - **Age rating questionnaire** → answer None/No throughout → 4+.
 - **Category**: Productivity (secondary: Finance).
 - **Pricing and Availability**: Free, choose countries.
@@ -251,7 +251,6 @@ Common rejection reasons to avoid:
 
 - **Guideline 4.2 (minimum functionality)**: the app needs to feel complete. This one has three full sections, which helps. Use real screenshots, not mock-ups.
 - **Crashes or placeholder content**: test the exact TestFlight build first.
-- **Missing iPad screenshots** while `supportsTablet` is true.
 - **Notification permission requested at launch**: this app only asks when you save your first reminder, which is what Apple prefers.
 
 ### B8. Shipping updates (iOS)
@@ -326,18 +325,22 @@ Run them before every store submission.
 
 ## Pre-launch checklist
 
-- [ ] Final `bundleIdentifier` / `package` set in `app.json`
-- [ ] Icons generated (`npm run icons`) and the Noun Project icon licence purchased
-- [ ] Privacy policy filled in and hosted publicly
+- [x] Final `bundleIdentifier` / `package` set in `app.json` (`com.varshith.mynotes`)
+- [x] Icons generated (`npm run icons`)
+- [ ] Noun Project icon licence purchased (see 0.3)
+- [x] Privacy policy written ([PRIVACY_POLICY.md](PRIVACY_POLICY.md))
+- [ ] Privacy policy hosted at a public URL
+- [ ] Google Drive backup set up (Part C2: client IDs in EAS environment variables, consent screen published), or a conscious decision to launch without it
 - [ ] Tested on a real Android phone (preview APK) and iPhone (TestFlight)
-- [ ] Reminder notification fires on both platforms, and tapping it opens the task
+- [ ] Reminder alarm fires on both platforms, and tapping it opens the task
+- [ ] Backup and restore tested after a reinstall (if backup is on)
 - [ ] Maestro E2E flows pass on Android and iOS (Part D)
-- [ ] Screenshots captured (phone, plus iPad if `supportsTablet` is true)
-- [ ] Play: Data safety = no data collected; content rating, target audience and financial features done
+- [ ] iPhone and Android phone screenshots captured (no iPad: `supportsTablet` is false)
+- [ ] Play: Data safety matches the build (A3), content rating, target audience and financial features done
 - [ ] Play: 14-day closed test with 12+ testers finished (new personal accounts)
-- [ ] Apple: App Privacy = Data Not Collected; age rating done
+- [ ] Apple: App Privacy (B6) and age rating done
 - [ ] `version` bumped for every new release
 
 ## A note on user data
 
-All data lives in the on-device SQLite file `notes.db`. Uninstalling the app deletes it. iCloud and Google device backups normally include it, but there's no in-app export or sync yet. If people will rely on the app for years of financial history, consider adding **Export to CSV/JSON** (via `expo-sharing` and `expo-file-system`) before or soon after launch.
+All data lives in the on-device SQLite file `notes.db`. Uninstalling the app deletes it. iCloud and Google device backups normally include it. Users who sign in with Google also get the app's own backup to their Drive app data folder, which survives a reinstall (Settings → Restore). There's no CSV export yet; if people want their financial history in a spreadsheet, consider adding **Export to CSV** (via `expo-sharing` and `expo-file-system`).
