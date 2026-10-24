@@ -70,3 +70,30 @@ export type TaskInput = Pick<
 /** A task will notify when it's switched on and has both a date and a time. */
 export const hasReminder = (t: Pick<Task, 'remind' | 'dueOn' | 'dueTime'>) =>
   t.remind && t.dueOn != null && t.dueTime != null;
+
+/** A spending limit for an expense category (or one of its subcategories) over a date range. */
+export interface Budget {
+  id: number;
+  category: string;
+  /** null: the whole category. */
+  subcategory: string | null;
+  amountCents: number;
+  /** YYYY-MM-DD, inclusive. */
+  startOn: string;
+  endOn: string;
+}
+
+export type BudgetInput = Omit<Budget, 'id'>;
+
+/** A budget with what's been spent against it within its own date range. */
+export interface BudgetStatus extends Budget {
+  spentCents: number;
+}
+
+/** Remaining amount (negative when over budget). */
+export const budgetLeft = (b: BudgetStatus) => b.amountCents - b.spentCents;
+
+export interface CategoryTotal {
+  category: string;
+  totalCents: number;
+}

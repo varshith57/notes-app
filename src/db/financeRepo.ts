@@ -2,7 +2,13 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { DateRange } from '@/lib/periods';
 
-import type { Direction, FinanceSummary, Transaction, TransactionInput } from './types';
+import type {
+  CategoryTotal,
+  Direction,
+  FinanceSummary,
+  Transaction,
+  TransactionInput,
+} from './types';
 
 interface TransactionRow {
   id: number;
@@ -127,4 +133,21 @@ export async function getFinanceSummary(
     range.to,
   );
   return { incomeCents: row?.income ?? 0, expenseCents: row?.expense ?? 0 };
+}
+
+/** Total per category for one direction within `range`, largest first. */
+export async function listCategoryTotals(
+  db: SQLiteDatabase,
+  range: DateRange,
+  direction: Direction,
+): Promise<CategoryTotal[]> {
+  return db.getAllAsync<CategoryTotal>(
+    `SELECT category, SUM(amount_cents) AS totalCents FROM transactions
+     WHERE direction = ? AND occurred_on BETWEEN ? AND ?
+     GROUP BY category
+     ORDER BY totalCents DESC`,
+    direction,
+    range.from,
+    range.to,
+  );
 }

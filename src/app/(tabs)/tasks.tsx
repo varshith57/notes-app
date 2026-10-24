@@ -1,12 +1,13 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState, type ComponentProps } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SelectionBar } from '@/components/SelectionBar';
 import { TAB_BAR_SPACE } from '@/components/TabBar';
 import { TaskRow } from '@/components/TaskRow';
+import { Text } from '@/components/Text';
 import { WeekStrip, weekOf } from '@/components/WeekStrip';
 import { EmptyState, Fab, ScreenTitle, Segmented } from '@/components/ui';
 import { listBusyDays, listForDay, listReminders, listTodos } from '@/db/tasksRepo';

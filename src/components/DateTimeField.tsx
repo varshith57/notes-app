@@ -1,12 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { formatDay, formatTime } from '@/lib/format';
 import { colors, radius } from '@/lib/theme';
 
 import { DatePickerSheet } from './pickers/DatePickerSheet';
 import { TimePickerSheet } from './pickers/TimePickerSheet';
+import { Text } from './Text';
 
 /**
  * Date or time field that opens the app's own themed picker sheet (same look on iOS,

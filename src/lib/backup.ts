@@ -1,7 +1,15 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { LEGACY_CATEGORY_SQL } from '@/db/migrations';
+
 /** User-data tables included in a backup (app_settings is device state, not backed up). */
-export const BACKUP_TABLES = ['notes', 'transactions', 'custom_subcategories', 'tasks'] as const;
+export const BACKUP_TABLES = [
+  'notes',
+  'transactions',
+  'custom_subcategories',
+  'tasks',
+  'budgets',
+] as const;
 type Table = (typeof BACKUP_TABLES)[number];
 
 export interface Snapshot {
@@ -64,5 +72,7 @@ export async function importSnapshot(db: SQLiteDatabase, snap: Snapshot): Promis
     }
     // Notification ids from the backed-up install mean nothing here.
     await db.runAsync('UPDATE tasks SET notification_id = NULL');
+    // Older backups may use category names that have since been split or moved.
+    await db.execAsync(LEGACY_CATEGORY_SQL);
   });
 }

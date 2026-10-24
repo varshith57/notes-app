@@ -1,9 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { fromISODate, toISODate, todayISO } from '@/lib/format';
 import { colors, gradient } from '@/lib/theme';
+
+import { Text } from './Text';
 
 /** Monday-first week containing `day`, as YYYY-MM-DD strings. */
 export function weekOf(day: string): string[] {

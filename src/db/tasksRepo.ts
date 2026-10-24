@@ -168,6 +168,11 @@ export async function setTaskNotificationId(
   await db.runAsync('UPDATE tasks SET notification_id = ? WHERE id = ?', notificationId, id);
 }
 
+/** Forgets every scheduled reminder id (after cancelling them all). */
+export async function clearAllNotificationIds(db: SQLiteDatabase): Promise<void> {
+  await db.runAsync('UPDATE tasks SET notification_id = NULL');
+}
+
 export async function setTaskDone(db: SQLiteDatabase, id: number, done: boolean): Promise<void> {
   await db.runAsync(
     `UPDATE tasks

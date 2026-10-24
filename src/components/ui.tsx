@@ -2,18 +2,12 @@ import { Feather } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { leaveTo } from '@/lib/dialogs';
 import { colors, gradient, progressGradient, radius } from '@/lib/theme';
+
+import { Text } from './Text';
 
 type IconName = keyof typeof Feather.glyphMap;
 
@@ -29,7 +23,10 @@ export function ScreenTitle({
   return (
     <View style={styles.titleRow}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.title}>{title}</Text>
+        {/* One line: shrinks at large text sizes rather than breaking mid-word. */}
+        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+          {title}
+        </Text>
         {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
       {right}
@@ -43,11 +40,14 @@ export function IconButton({
   onPress,
   label,
   active,
+  children,
 }: {
-  icon: IconName;
+  icon?: IconName;
   onPress: () => void;
   label: string;
   active?: boolean;
+  /** A custom icon in place of `icon`. */
+  children?: ReactNode;
 }) {
   return (
     <Pressable
@@ -60,7 +60,7 @@ export function IconButton({
         pressed && { opacity: 0.6 },
       ]}
     >
-      <Feather name={icon} size={20} color={active ? colors.onPrimary : colors.text} />
+      {children ?? (icon && <Feather name={icon} size={20} color={active ? colors.onPrimary : colors.text} />)}
     </Pressable>
   );
 }
@@ -117,7 +117,14 @@ export function Segmented<T extends string>({
             {o.icon && (
               <Feather name={o.icon} size={15} color={selected ? colors.primary : colors.muted} />
             )}
-            <Text style={[styles.segmentText, selected && { color: colors.text }]}>{o.label}</Text>
+            {/* Shrinks rather than overflowing at large text sizes. */}
+            <Text
+              style={[styles.segmentText, selected && { color: colors.text }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -158,11 +165,24 @@ export function Fab({ onPress, label, bottom }: { onPress: () => void; label: st
   );
 }
 
-export function EmptyState({ icon, title, hint }: { icon: IconName; title: string; hint: string }) {
+export function EmptyState({
+  icon,
+  title,
+  hint,
+}: {
+  /** A Feather icon name, or a custom icon. */
+  icon: IconName | ReactNode;
+  title: string;
+  hint: string;
+}) {
   return (
     <View style={styles.empty}>
       <View style={styles.emptyIcon}>
-        <Feather name={icon} size={26} color={colors.primary} />
+        {typeof icon === 'string' ? (
+          <Feather name={icon as IconName} size={26} color={colors.primary} />
+        ) : (
+          icon
+        )}
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyHint}>{hint}</Text>
@@ -234,12 +254,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 11,
+    paddingHorizontal: 6,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
   },
   segmentSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
-  segmentText: { fontSize: 14, fontWeight: '600', color: colors.muted },
+  segmentText: { flexShrink: 1, fontSize: 14, fontWeight: '600', color: colors.muted },
   progressTrack: {
     height: 10,
     borderRadius: 5,

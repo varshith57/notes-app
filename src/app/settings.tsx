@@ -1,12 +1,26 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoogleButton } from '@/components/GoogleButton';
+import { Text } from '@/components/Text';
 import { webHeaderLeft } from '@/components/ui';
 import { confirmChoice, showMessage } from '@/lib/dialogs';
 import { formatTime, formatTimestamp, toHHMM } from '@/lib/format';
+import { REMINDER_TONES, useReminderPrefs, type ReminderPrefs } from '@/lib/reminderPrefs';
+import { sendTestReminder } from '@/lib/reminders';
 import {
   backupNow,
   restoreFromBackup,
@@ -15,15 +29,27 @@ import {
   signOut,
   useSyncState,
 } from '@/lib/sync';
-import { scaled, stepTextScale, TEXT_SCALES, textScaleIndex, useTextScale } from '@/lib/textScale';
+import { updateReminderPrefs } from '@/lib/taskActions';
+import { stepTextScale, TEXT_SCALES, textScaleIndex, useTextScale } from '@/lib/textScale';
 import { colors, radius } from '@/lib/theme';
+
+// React Native Web uses its own (teal) knob colour when on unless told otherwise.
+const switchColors = {
+  trackColor: { true: colors.primary, false: colors.border },
+  thumbColor: colors.background,
+  ...(Platform.OS === 'web' ? ({ activeThumbColor: colors.background } as object) : {}),
+};
 
 const when = (iso: string) => `${formatTimestamp(iso)}, ${formatTime(toHHMM(new Date(iso)))}`;
 
 export default function SettingsScreen() {
+  const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
+  const reminders = useReminderPrefs();
+  const [updatingReminders, setUpdatingReminders] = useState(false);
   const sync = useSyncState();
-  const scale = useTextScale();
+  // Re-render when the size changes (the dots and button states read it).
+  useTextScale();
   const step = textScaleIndex();
 
   const run = async (task: () => Promise<unknown>, failTitle: string) => {
@@ -33,6 +59,31 @@ export default function SettingsScreen() {
       await showMessage(failTitle, e instanceof Error ? e.message.split('\n')[0] : undefined);
     }
   };
+
+  const changeReminders = (patch: Partial<ReminderPrefs>) =>
+    run(async () => {
+      setUpdatingReminders(true);
+      try {
+        await updateReminderPrefs(db, patch);
+      } finally {
+        setUpdatingReminders(false);
+      }
+    }, 'Couldn’t update reminders');
+
+  const testReminder = () =>
+    run(async () => {
+      const error = await sendTestReminder();
+      if (error === 'unsupported') {
+        await showMessage('Phone only', 'Reminders ring in the phone app, not in the web preview.');
+      } else if (error === 'denied') {
+        await showMessage(
+          'Notifications are off',
+          'Allow notifications for My Notes in your phone’s settings to hear reminders.',
+        );
+      } else {
+        await showMessage('Test reminder set', 'It rings in 5 seconds. You can lock your phone.');
+      }
+    }, 'Couldn’t send a test reminder');
 
   const restore = () =>
     run(async () => {
@@ -67,7 +118,7 @@ export default function SettingsScreen() {
             <Text style={[styles.sizeGlyph, { fontSize: 15 }]}>A−</Text>
           </Pressable>
           <View style={styles.sizePreview}>
-            <Text style={[styles.previewText, { fontSize: scaled(17, scale) }]} numberOfLines={2}>
+            <Text style={styles.previewText} numberOfLines={2}>
               Your notes will look like this.
             </Text>
             <View style={styles.dots} accessibilityLabel={`Text size ${step + 1} of ${TEXT_SCALES.length}`}>
@@ -86,7 +137,88 @@ export default function SettingsScreen() {
             <Text style={[styles.sizeGlyph, { fontSize: 22 }]}>A+</Text>
           </Pressable>
         </View>
-        <Text style={styles.sub}>Changes the size of note text, task and finance entries.</Text>
+        <Text style={styles.sub}>Changes the size of text across the whole app.</Text>
+      </View>
+
+      <Text style={[styles.section, { marginTop: 12 }]}>REMINDERS</Text>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.icon}>
+            <Feather name="bell" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Task reminders</Text>
+            <Text style={styles.sub}>Notify me when a task with a date and time is due.</Text>
+          </View>
+          {updatingReminders ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Switch
+              value={reminders.enabled}
+              onValueChange={(enabled) => changeReminders({ enabled })}
+              accessibilityLabel="Task reminders"
+              {...switchColors}
+            />
+          )}
+        </View>
+
+        {reminders.enabled && (
+          <>
+            <View style={styles.statusRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Ring like an alarm</Text>
+                <Text style={styles.sub}>
+                  {reminders.loud
+                    ? 'Alarm volume, rings even when the phone is on silent.'
+                    : 'Normal notification volume; follows silent mode.'}
+                </Text>
+              </View>
+              <Switch
+                value={reminders.loud}
+                onValueChange={(loud) => changeReminders({ loud })}
+                disabled={updatingReminders}
+                accessibilityLabel="Ring like an alarm"
+                {...switchColors}
+              />
+            </View>
+
+            <View style={{ gap: 2 }}>
+              <Text style={styles.label}>Tone</Text>
+              {REMINDER_TONES.map((tone) => {
+                const selected = tone.key === reminders.tone;
+                return (
+                  <Pressable
+                    key={tone.key}
+                    onPress={() => !selected && changeReminders({ tone: tone.key })}
+                    disabled={updatingReminders}
+                    style={styles.toneRow}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                  >
+                    <View style={[styles.radio, selected && styles.radioOn]}>
+                      {selected && <View style={styles.radioDot} />}
+                    </View>
+                    <Text style={[styles.toneLabel, selected && { fontWeight: '700' }]}>
+                      {tone.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={styles.actions}>
+              <Pressable onPress={testReminder} disabled={updatingReminders} style={styles.secondary}>
+                <Text style={styles.secondaryText}>Play a test reminder</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
+
+        {Platform.OS !== 'web' && (
+          <Pressable onPress={() => Linking.openSettings()} hitSlop={8}>
+            <Text style={styles.link}>Phone notification settings</Text>
+          </Pressable>
+        )}
       </View>
 
       <Text style={[styles.section, { marginTop: 12 }]}>BACKUP & SYNC</Text>
@@ -143,9 +275,8 @@ export default function SettingsScreen() {
               <Switch
                 value={sync.autoBackup}
                 onValueChange={(on) => run(() => setAutoBackup(on), 'Couldn’t change setting')}
-                trackColor={{ true: colors.primary, false: colors.border }}
-                thumbColor={colors.background}
                 accessibilityLabel="Back up automatically"
+                {...switchColors}
               />
             </View>
 
@@ -193,7 +324,7 @@ const styles = StyleSheet.create({
   },
   sizeGlyph: { fontWeight: '800', color: colors.primary },
   sizePreview: { flex: 1, alignItems: 'center', gap: 8 },
-  previewText: { color: colors.text, textAlign: 'center' },
+  previewText: { fontSize: 17, color: colors.text, textAlign: 'center' },
   dots: { flexDirection: 'row', gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.border },
   dotActive: { backgroundColor: colors.primary, width: 18 },
@@ -244,4 +375,17 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   secondaryText: { fontSize: 15, fontWeight: '700', color: colors.primary },
+  toneRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.grey,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOn: { borderColor: colors.primary },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  toneLabel: { fontSize: 15, color: colors.text },
 });

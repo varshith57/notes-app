@@ -3,19 +3,20 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
+// The paper's own text scales with the ruled-line grid below, so it uses React Native's
+// Text / TextInput directly rather than the app's auto-scaled ones.
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
+  Text as PaperText,
+  TextInput as PaperInput,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RuledPaper } from '@/components/RuledPaper';
+import { Text } from '@/components/Text';
 import { webHeaderLeft } from '@/components/ui';
 import { createNote, deleteNote, getNote, updateNote } from '@/db/notesRepo';
 import type { NoteInput } from '@/db/types';
@@ -46,6 +47,8 @@ const RULE_BELOW_BASELINE = 4;
  * from the real text layout; this is the web value (onTextLayout isn't available there).
  */
 const BASE_RULE_IN_ROW = 26;
+/** Height of the pin/colour bar while it sits on the keyboard (keeps the caret clear of it). */
+const PALETTE_HEIGHT = 60;
 
 /**
  * Distraction-free editor. Saves automatically as you type; an empty note is
@@ -215,119 +218,125 @@ export default function NoteEditorScreen() {
           ),
         }}
       />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={insets.top + 44}
+      {/* Follows the caret while typing so the line being written stays above the keyboard
+          and the colour bar on top of it; the extra keyboard space keeps the whole note
+          scrollable while the keyboard is open. */}
+      <KeyboardAwareScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={PALETTE_HEIGHT + LINE}
       >
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <RuledPaper
-            style={[styles.paper, { paddingBottom: LINE * 2 }]}
-            lineHeight={LINE}
-            firstRule={PAPER_TOP + ruleInRow}
-            marginX={MARGIN_X}
-            lineColor={tone.rule}
-            marginColor={tone.margin}
-          >
-            {/* Invisible one-line sample in the body style: its layout tells us where this
-                phone draws the baseline inside a row, so the rules land right under the text. */}
-            <Text
-              key={scale}
-              style={[styles.body, textSizes.body, styles.measure]}
-              onTextLayout={(e) => {
-                const line = e.nativeEvent.lines[0];
-                if (line) {
-                  setMeasuredRule({
-                    scale,
-                    y: Math.round(line.y + line.ascender + RULE_BELOW_BASELINE),
-                  });
-                }
-              }}
-              aria-hidden
-              accessible={false}
-            >
-              Ag
-            </Text>
-            <TextInput
-              style={[
-                styles.title,
-                textSizes.title,
-                { color: tone.text, height: rows(titleHeight) * LINE },
-              ]}
-              placeholder="Title"
-              placeholderTextColor={tone.placeholder}
-              value={title}
-              onChangeText={setTitle}
-              multiline
-              scrollEnabled={false}
-              textAlignVertical="top"
-              onContentSizeChange={(e) => setTitleHeight(e.nativeEvent.contentSize.height)}
-            />
-            {updatedAt && (
-              <Text style={[styles.meta, textSizes.meta, { color: tone.muted }]}>
-                Edited {formatTimestamp(updatedAt)}
-              </Text>
-            )}
-            <TextInput
-              style={[
-                styles.body,
-                textSizes.body,
-                { color: tone.text, height: Math.max(12 * LINE, rows(bodyHeight) * LINE) },
-              ]}
-              placeholder="Start writing…"
-              placeholderTextColor={tone.placeholder}
-              value={body}
-              onChangeText={setBody}
-              multiline
-              scrollEnabled={false}
-              textAlignVertical="top"
-              autoFocus={isNew}
-              onContentSizeChange={(e) => setBodyHeight(e.nativeEvent.contentSize.height)}
-            />
-          </RuledPaper>
-        </ScrollView>
-
-        <View
-          style={[
-            styles.palette,
-            { borderTopColor: tone.rule, paddingBottom: Math.max(insets.bottom, 12) },
-          ]}
+        <RuledPaper
+          style={[styles.paper, { paddingBottom: LINE * 2 }]}
+          lineHeight={LINE}
+          firstRule={PAPER_TOP + ruleInRow}
+          marginX={MARGIN_X}
+          lineColor={tone.rule}
+          marginColor={tone.margin}
         >
-          <Pressable
-            onPress={() => setPinned((p) => !p)}
-            style={[styles.pin, { borderColor: pinned ? tone.accent : tone.rule }]}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: pinned }}
-            accessibilityLabel="Pin to top"
+          {/* Invisible one-line sample in the body style: its layout tells us where this
+              phone draws the baseline inside a row, so the rules land right under the text. */}
+          <PaperText
+            key={scale}
+            style={[styles.body, textSizes.body, styles.measure]}
+            onTextLayout={(e) => {
+              const line = e.nativeEvent.lines[0];
+              if (line) {
+                setMeasuredRule({
+                  scale,
+                  y: Math.round(line.y + line.ascender + RULE_BELOW_BASELINE),
+                });
+              }
+            }}
+            aria-hidden
+            accessible={false}
           >
-            <Feather name="bookmark" size={16} color={pinned ? tone.accent : tone.muted} />
-            <Text style={[styles.pinText, { color: pinned ? tone.accent : tone.muted }]}>
-              {pinned ? 'Pinned' : 'Pin'}
-            </Text>
-          </Pressable>
-          {NOTE_COLOR_KEYS.map((key) => {
-            const selected = key === color;
-            const swatch = NOTE_COLORS[key];
-            return (
-              <Pressable
-                key={key}
-                onPress={() => setColor(key)}
-                accessibilityLabel={`${swatch.label} colour`}
-                accessibilityState={{ selected }}
-                // The ring uses the current note's ink so it shows on every paper,
-                // including a swatch the same colour as the page.
-                style={[
-                  styles.swatch,
-                  { backgroundColor: swatch.background, borderColor: tone.rule },
-                  selected && { borderColor: tone.text },
-                ]}
-              >
-                {selected && <Feather name="check" size={16} color={swatch.text} />}
-              </Pressable>
-            );
-          })}
-        </View>
-      </KeyboardAvoidingView>
+            Ag
+          </PaperText>
+          <PaperInput
+            style={[
+              styles.title,
+              textSizes.title,
+              { color: tone.text, height: rows(titleHeight) * LINE },
+            ]}
+            placeholder="Title"
+            placeholderTextColor={tone.placeholder}
+            value={title}
+            onChangeText={setTitle}
+            multiline
+            scrollEnabled={false}
+            textAlignVertical="top"
+            onContentSizeChange={(e) => setTitleHeight(e.nativeEvent.contentSize.height)}
+          />
+          {updatedAt && (
+            <PaperText style={[styles.meta, textSizes.meta, { color: tone.muted }]}>
+              Edited {formatTimestamp(updatedAt)}
+            </PaperText>
+          )}
+          <PaperInput
+            style={[
+              styles.body,
+              textSizes.body,
+              { color: tone.text, height: Math.max(12 * LINE, rows(bodyHeight) * LINE) },
+            ]}
+            placeholder="Start writing…"
+            placeholderTextColor={tone.placeholder}
+            value={body}
+            onChangeText={setBody}
+            multiline
+            scrollEnabled={false}
+            textAlignVertical="top"
+            autoFocus={isNew}
+            onContentSizeChange={(e) => setBodyHeight(e.nativeEvent.contentSize.height)}
+          />
+        </RuledPaper>
+      </KeyboardAwareScrollView>
+
+      <KeyboardStickyView
+        offset={{ opened: Math.max(insets.bottom, 12) - 12 }}
+        style={[
+          styles.palette,
+          {
+            backgroundColor: tone.background,
+            borderTopColor: tone.rule,
+            paddingBottom: Math.max(insets.bottom, 12),
+          },
+        ]}
+      >
+        <Pressable
+          onPress={() => setPinned((p) => !p)}
+          style={[styles.pin, { borderColor: pinned ? tone.accent : tone.rule }]}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: pinned }}
+          accessibilityLabel="Pin to top"
+        >
+          <Feather name="bookmark" size={16} color={pinned ? tone.accent : tone.muted} />
+          <Text style={[styles.pinText, { color: pinned ? tone.accent : tone.muted }]}>
+            {pinned ? 'Pinned' : 'Pin'}
+          </Text>
+        </Pressable>
+        {NOTE_COLOR_KEYS.map((key) => {
+          const selected = key === color;
+          const swatch = NOTE_COLORS[key];
+          return (
+            <Pressable
+              key={key}
+              onPress={() => setColor(key)}
+              accessibilityLabel={`${swatch.label} colour`}
+              accessibilityState={{ selected }}
+              // The ring uses the current note's ink so it shows on every paper,
+              // including a swatch the same colour as the page.
+              style={[
+                styles.swatch,
+                { backgroundColor: swatch.background, borderColor: tone.rule },
+                selected && { borderColor: tone.text },
+              ]}
+            >
+              {selected && <Feather name="check" size={16} color={swatch.text} />}
+            </Pressable>
+          );
+        })}
+      </KeyboardStickyView>
     </View>
   );
 }

@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/Text';
 import { formatTime } from '@/lib/format';
 import { colors, radius } from '@/lib/theme';
 
@@ -43,7 +44,6 @@ export function TimePickerSheet({
   onCancel: () => void;
 }) {
   const [{ h, m }, setTime] = useState(parse(value));
-
 
   const set = (hour: number, minute: number) =>
     setTime({ h: ((hour % 24) + 24) % 24, m: ((minute % 60) + 60) % 60 });

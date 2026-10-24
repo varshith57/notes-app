@@ -1,10 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoogleButton } from '@/components/GoogleButton';
+import { Text } from '@/components/Text';
 import { setSetting } from '@/db/settingsRepo';
 import { showMessage } from '@/lib/dialogs';
 import { signIn, useSyncState } from '@/lib/sync';

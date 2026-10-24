@@ -3,12 +3,13 @@ import { router, useFocusEffect, type Href } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NoteCard } from '@/components/NoteCard';
 import { TAB_BAR_SPACE } from '@/components/TabBar';
 import { TaskRow } from '@/components/TaskRow';
+import { Text } from '@/components/Text';
 import { GradientProgress, IconButton, SectionLabel } from '@/components/ui';
 import { getFinanceSummary } from '@/db/financeRepo';
 import { listNotes } from '@/db/notesRepo';
@@ -102,7 +103,9 @@ export default function HomeScreen() {
               <View style={[styles.shortcutIcon, { backgroundColor: s.bg }]}>
                 <Feather name={s.icon} size={22} color={s.fg} />
               </View>
-              <Text style={styles.shortcutLabel}>{s.label}</Text>
+              <Text style={styles.shortcutLabel} numberOfLines={1} adjustsFontSizeToFit>
+                {s.label}
+              </Text>
             </Pressable>
           ))}
         </View>

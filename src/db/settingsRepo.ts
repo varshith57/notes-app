@@ -7,7 +7,10 @@ export type SettingKey =
   | 'backup_auto'
   | 'last_backup_at'
   | 'last_backup_error'
-  | 'text_scale';
+  | 'text_scale'
+  | 'reminders_enabled'
+  | 'reminder_tone'
+  | 'reminder_loud';
 
 export async function getSetting(db: SQLiteDatabase, key: SettingKey): Promise<string | null> {
   const row = await db.getFirstAsync<{ value: string | null }>(

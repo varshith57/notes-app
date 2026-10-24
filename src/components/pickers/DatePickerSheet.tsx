@@ -1,20 +1,21 @@
 import { Feather } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/Text';
 import { fromISODate, toISODate, todayISO } from '@/lib/format';
 import { colors, radius } from '@/lib/theme';
 
 import { Sheet } from './Sheet';
 
-const addDays = (iso: string, n: number) => {
+export const addDays = (iso: string, n: number) => {
   const d = fromISODate(iso);
   d.setDate(d.getDate() + n);
   return toISODate(d);
 };
 
 /** Monday-first 6×7 grid of YYYY-MM-DD for the month containing `month` (any day in it). */
-function monthGrid(month: string): string[] {
+export function monthGrid(month: string): string[] {
   const first = fromISODate(month);
   first.setDate(1);
   const start = new Date(first);
@@ -27,7 +28,7 @@ function monthGrid(month: string): string[] {
 }
 
 // Weekday initials in the device language, Monday first (2024-01-01 was a Monday).
-const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
+export const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
   new Date(2024, 0, 1 + i).toLocaleDateString(undefined, { weekday: 'narrow' }),
 );
 
@@ -49,7 +50,6 @@ export function DatePickerSheet({
   const today = todayISO();
   const [selected, setSelected] = useState(value ?? today);
   const [month, setMonth] = useState(value ?? today);
-
 
   const days = useMemo(() => monthGrid(month), [month]);
   const monthIndex = fromISODate(month).getMonth();

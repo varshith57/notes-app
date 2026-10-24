@@ -1,6 +1,8 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, radius } from '@/lib/theme';
+
+import { Text } from './Text';
 
 /** "Sign in with Google" in the app's style (Google's brand guide allows a custom button
  *  with the "G" mark and this wording). */

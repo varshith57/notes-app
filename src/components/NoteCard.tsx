@@ -1,13 +1,13 @@
 import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Note } from '@/db/types';
 import { SELECT_HOLD_MS } from '@/hooks/useSelection';
 import { formatTimestamp } from '@/lib/format';
-import { scaled, useTextScale } from '@/lib/textScale';
 import { colors, noteTone, radius } from '@/lib/theme';
 
 import { SelectedBadge, selectedStyle } from './SelectionBar';
+import { Text } from './Text';
 
 export function NoteCard({
   note,
@@ -21,7 +21,6 @@ export function NoteCard({
   selected?: boolean;
 }) {
   const tone = noteTone(note.color);
-  const scale = useTextScale();
   const preview = note.body.trim();
 
   return (
@@ -39,7 +38,7 @@ export function NoteCard({
       {selected && <SelectedBadge />}
       <View style={styles.header}>
         <Text
-          style={[styles.title, { color: tone.text, fontSize: scaled(18, scale) }]}
+          style={[styles.title, { color: tone.text }]}
           numberOfLines={1}
         >
           {note.title || preview.split('\n')[0] || 'Untitled'}
@@ -50,7 +49,7 @@ export function NoteCard({
         <Text
           style={[
             styles.body,
-            { color: tone.muted, fontSize: scaled(14, scale), lineHeight: scaled(20, scale) },
+            { color: tone.muted },
           ]}
           numberOfLines={3}
         >

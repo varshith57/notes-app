@@ -1,12 +1,13 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NoteCard } from '@/components/NoteCard';
 import { SelectionBar } from '@/components/SelectionBar';
 import { TAB_BAR_SPACE } from '@/components/TabBar';
+import { Text, TextInput } from '@/components/Text';
 import { EmptyState, Fab, IconButton, ScreenTitle } from '@/components/ui';
 import { deleteNotes, listNotes } from '@/db/notesRepo';
 import type { Note } from '@/db/types';

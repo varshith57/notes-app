@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
+  clearAllNotificationIds,
   clearNotificationIds,
   createTask,
   deleteTask,
@@ -13,7 +14,9 @@ import {
 } from '@/db/tasksRepo';
 import { hasReminder, type Task, type TaskInput } from '@/db/types';
 
+import { initReminderPrefs, storeReminderPrefs, type ReminderPrefs } from './reminderPrefs';
 import {
+  cancelAllReminders,
   cancelLegacyReminders,
   cancelReminder,
   scheduleReminder,
@@ -68,11 +71,27 @@ export async function removeTasks(db: SQLiteDatabase, tasks: Task[]): Promise<vo
  * migration, or saved while notifications were off). Safe to call on every app start.
  */
 export async function syncPendingReminders(db: SQLiteDatabase): Promise<void> {
-  // Move reminders scheduled before the alarm channel existed onto it.
+  await initReminderPrefs(db);
+  // Move reminders scheduled with an earlier tone (or by an older version) onto the current one.
   const stale = await cancelLegacyReminders();
   if (stale.length) await clearNotificationIds(db, stale);
   for (const task of await listPendingReminders(db)) {
     const result = await scheduleReminder(task, { interactive: false });
     if ('id' in result) await setTaskNotificationId(db, task.id, result.id);
   }
+}
+
+/**
+ * Saves a Settings change to reminders and reschedules every pending reminder with it
+ * (Android ties the tone to the scheduled notification). Turning reminders off cancels them;
+ * turning them back on schedules the ones still due.
+ */
+export async function updateReminderPrefs(
+  db: SQLiteDatabase,
+  patch: Partial<ReminderPrefs>,
+): Promise<void> {
+  await storeReminderPrefs(patch);
+  await cancelAllReminders();
+  await clearAllNotificationIds(db);
+  await syncPendingReminders(db);
 }

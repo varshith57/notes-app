@@ -1,15 +1,41 @@
-/** "1,250" for whole amounts; decimals only when the amount has them ("1,250.50"). */
-export function formatMoney(cents: number): string {
-  const digits = cents % 100 === 0 ? 0 : 2;
-  return (cents / 100).toLocaleString(undefined, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
+/**
+ * Thousands separators for a whole number written as digits: "125000" → "1,25,000" or
+ * "125,000", following the phone's region. Falls back to groups of three when the
+ * platform's number formatting isn't available or uses a different separator.
+ */
+function groupDigits(int: string): string {
+  const digits = int.replace(/^0+(?=\d)/, '');
+  let local = '';
+  try {
+    local = Number(digits).toLocaleString(undefined, { maximumFractionDigits: 0, useGrouping: true });
+  } catch {}
+  if (/^\d{1,3}(,\d{2,3})*$/.test(local) && local.replace(/,/g, '') === digits) return local;
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-/** Plain, unformatted amount for an input field: "1250" or "1250.50". */
+/** "1,250" for whole amounts; decimals only when the amount has them ("1,250.50"). */
+export function formatMoney(cents: number): string {
+  const abs = Math.abs(Math.round(cents));
+  const whole = groupDigits(String(Math.floor(abs / 100)));
+  const fraction = abs % 100;
+  return `${cents < 0 ? '-' : ''}${whole}${fraction ? `.${String(fraction).padStart(2, '0')}` : ''}`;
+}
+
+/** Amount for an input field, with separators: "1,250" or "1,250.50". */
 export function centsToInput(cents: number): string {
-  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
+  return formatMoney(cents);
+}
+
+/**
+ * Tidies an amount as it's typed: keeps digits and one decimal point (two places at most)
+ * and adds thousands separators, so "125000" shows as "1,25,000" / "125,000".
+ */
+export function formatAmountInput(text: string): string {
+  const cleaned = text.replace(/[^\d.]/g, '');
+  if (!cleaned) return '';
+  const [int, ...rest] = cleaned.split('.');
+  const grouped = int ? groupDigits(int) : '0';
+  return rest.length ? `${grouped}.${rest.join('').slice(0, 2)}` : grouped;
 }
 
 /** Parses user input like "1,234.5" into integer cents. Returns null when invalid or zero. */

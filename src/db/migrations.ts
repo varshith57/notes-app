@@ -5,6 +5,25 @@ export const DATABASE_NAME = 'notes.db';
 const NOW = `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 
 /**
+ * Moves rows saved under category names that have since been split or moved. Part of
+ * migration v5, and run again after restoring a backup made by an older version.
+ * Idempotent.
+ */
+export const LEGACY_CATEGORY_SQL = `
+  -- Groceries became its own category (was a Food & Dining subcategory).
+  UPDATE transactions SET category = 'Groceries', subcategory = NULL
+    WHERE direction = 'expense' AND category = 'Food & Dining' AND subcategory = 'Groceries';
+  -- "Bills & EMIs" split into Bills and EMIs.
+  UPDATE transactions SET category = CASE WHEN subcategory = 'Loan EMI' THEN 'EMIs' ELSE 'Bills' END
+    WHERE direction = 'expense' AND category = 'Bills & EMIs';
+  UPDATE OR IGNORE custom_subcategories SET category = 'Bills'
+    WHERE direction = 'expense' AND category = 'Bills & EMIs';
+  -- Rental is its own income category (was an Investments subcategory).
+  UPDATE transactions SET category = 'Rental', subcategory = NULL
+    WHERE direction = 'income' AND category = 'Investments' AND subcategory = 'Rental Income';
+`;
+
+/**
  * Each entry upgrades the schema by one version. Never edit a migration once the app
  * has shipped — users already have it applied. Append a new one instead.
  */
@@ -89,6 +108,22 @@ const MIGRATIONS: string[] = [
     key   TEXT PRIMARY KEY NOT NULL,
     value TEXT
   );
+  `,
+  // v5: spending budgets for an expense category (or one subcategory) over a date range,
+  // plus the category changes (Groceries, Bills / EMIs, Rental).
+  `
+  CREATE TABLE budgets (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    category     TEXT    NOT NULL,
+    subcategory  TEXT,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    start_on     TEXT    NOT NULL,
+    end_on       TEXT    NOT NULL,
+    created_at   TEXT    NOT NULL DEFAULT ${NOW},
+    updated_at   TEXT    NOT NULL DEFAULT ${NOW}
+  );
+  CREATE INDEX idx_budgets_dates ON budgets (start_on, end_on);
+  ${LEGACY_CATEGORY_SQL}
   `,
 ];
 

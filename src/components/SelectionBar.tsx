@@ -1,7 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, radius } from '@/lib/theme';
+
+import { Text } from './Text';
 
 /** Replaces a list's title while items are selected: count, select all, delete, cancel. */
 export function SelectionBar({

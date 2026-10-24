@@ -1,10 +1,12 @@
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PERIOD_LABELS, type PeriodKind } from '@/lib/periods';
 import { colors, radius } from '@/lib/theme';
+
+import { Text } from './Text';
 
 const KINDS: PeriodKind[] = ['month', 'quarter', 'year', 'custom'];
 
@@ -83,7 +85,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
   },
   pillText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(15,13,14,0.25)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(26,26,26,0.3)' },
   menu: {
     position: 'absolute',
     right: 20,

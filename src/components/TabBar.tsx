@@ -1,10 +1,12 @@
 import { Feather } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, gradient, radius } from '@/lib/theme';
+
+import { Text } from './Text';
 
 const ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   index: 'home',

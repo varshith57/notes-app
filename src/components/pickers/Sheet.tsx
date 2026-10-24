@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/Text';
 import { colors, radius } from '@/lib/theme';
 
 import { SystemNavBar } from '../SystemNavBar';
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(15,13,14,0.35)',
+    backgroundColor: 'rgba(26,26,26,0.4)',
   },
   sheet: {
     backgroundColor: colors.background,

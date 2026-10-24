@@ -47,7 +47,11 @@
           "color": "#6A0C1F",
           "enableRemoteNotifications": false,
           "sounds": [
-            "./assets/sounds/alarm.wav"
+            "./assets/sounds/alarm.wav",
+            "./assets/sounds/digital.wav",
+            "./assets/sounds/chime.wav",
+            "./assets/sounds/bell.wav",
+            "./assets/sounds/gentle.wav"
           ]
         }
       ],

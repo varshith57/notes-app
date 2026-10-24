@@ -3,20 +3,12 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateTimeField } from '@/components/DateTimeField';
+import { Text, TextInput } from '@/components/Text';
 import { Chip, SectionLabel, webHeaderLeft } from '@/components/ui';
 import { getTask } from '@/db/tasksRepo';
 import type { Priority, Task } from '@/db/types';
@@ -24,8 +16,8 @@ import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
 import { toHHMM, toISODate } from '@/lib/format';
+import { useReminderPrefs } from '@/lib/reminderPrefs';
 import type { ScheduleError } from '@/lib/reminders';
-import { scaled, useTextScale } from '@/lib/textScale';
 import { removeTask, saveTask } from '@/lib/taskActions';
 import { colors, gradient, PRIORITY_COLORS, radius } from '@/lib/theme';
 
@@ -33,7 +25,11 @@ const REMINDER_ERRORS: Record<ScheduleError, string> = {
   past: 'That time has already passed, so no notification was scheduled.',
   denied: 'Notifications are turned off for this app. Enable them in Settings to get reminders.',
   unsupported: 'Reminder notifications only work in the phone app, not in the web preview.',
+  disabled: 'Reminders are turned off in Settings, so no notification was scheduled.',
 };
+
+/** Height of the Save bar while it sits on the keyboard, for keeping the caret clear of it. */
+const FOOTER_HEIGHT = 78;
 
 /** Default slot for new timed tasks: the top of the next hour (tomorrow after 11 pm). */
 function nextHourSlot(): { date: string; time: string } {
@@ -56,7 +52,7 @@ export default function TaskEditorScreen() {
   const taskId = isNew ? null : Number(params.id);
   const timed = params.preset === 'agenda' || params.preset === 'reminder';
 
-  const scale = useTextScale();
+  const reminders = useReminderPrefs();
   const [loaded, setLoaded] = useState(isNew);
   const [existing, setExisting] = useState<Task | null>(null);
   const [title, setTitle] = useState('');
@@ -152,14 +148,10 @@ export default function TaskEditorScreen() {
 
   if (!loaded) return null;
 
-  const canRemind = dueOn != null && dueTime != null;
+  const canRemind = dueOn != null && dueTime != null && reminders.enabled;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={insets.top + 44}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen
         options={{
           title: isNew ? 'New task' : 'Edit task',
@@ -172,9 +164,15 @@ export default function TaskEditorScreen() {
             ) : null,
         }}
       />
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+      {/* Scrolls the field being typed in (and its caret) above the keyboard and the
+          Save button that rides on top of it. */}
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.form}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={FOOTER_HEIGHT + 16}
+      >
         <TextInput
-          style={[styles.title, { fontSize: scaled(22, scale) }]}
+          style={styles.title}
           placeholder="What needs doing?"
           placeholderTextColor={colors.placeholder}
           value={title}
@@ -230,7 +228,9 @@ export default function TaskEditorScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.remindTitle}>Remind me</Text>
             <Text style={styles.hint}>
-              {canRemind
+              {!reminders.enabled
+                ? 'Reminders are turned off in Settings.'
+                : canRemind
                 ? remind
                   ? 'You’ll get a notification at this time.'
                   : 'No notification for this task.'
@@ -264,7 +264,7 @@ export default function TaskEditorScreen() {
 
         <SectionLabel>NOTES</SectionLabel>
         <TextInput
-          style={[styles.details, { fontSize: scaled(15, scale) }]}
+          style={styles.details}
           placeholder="Add details, links, a checklist…"
           placeholderTextColor={colors.muted}
           value={details}
@@ -272,16 +272,19 @@ export default function TaskEditorScreen() {
           multiline
           textAlignVertical="top"
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <KeyboardStickyView
+        offset={{ opened: Math.max(insets.bottom, 16) - 16 }}
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}
+      >
         <Pressable onPress={save}>
           <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveButton}>
             <Text style={styles.saveText}>{isNew ? 'Save' : 'Update'}</Text>
           </LinearGradient>
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardStickyView>
+    </View>
   );
 }
 

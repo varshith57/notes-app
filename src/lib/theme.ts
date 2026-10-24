@@ -1,11 +1,13 @@
 // Palette: white canvas, cream surfaces, burgundy for actions and selection, gold for
-// highlights and progress, near-black for text and chrome, warm grey for borders.
+// highlights and progress, charcoal (softer than pure black) for text and chrome, warm grey
+// for borders.
 // Gold is never used for text on light backgrounds (fails contrast) — use goldDark.
 export const palette = {
   burgundy: '#6A0C1F',
   gold: '#C8A24A',
   cream: '#F6F1E7',
-  black: '#0F0D0E',
+  /** Charcoal used wherever the app would use black (text, chrome, the dark note). */
+  black: '#1A1A1A',
   grey: '#B3A7A0',
   white: '#FFFFFF',
 };
@@ -61,8 +63,8 @@ export interface NoteTone {
   dark: boolean;
 }
 
-// The five note colours are the app palette itself. Cream and gold take black ink, grey
-// takes burgundy ink, and the dark papers (burgundy, black) take bright cream ink with
+// The five note colours are the app palette itself. Cream and gold take charcoal ink, grey
+// takes burgundy ink, and the dark papers (burgundy, charcoal) take bright cream ink with
 // cream-tinted secondary text so nothing reads as dull.
 export const NOTE_COLORS = {
   cream: {
@@ -83,7 +85,7 @@ export const NOTE_COLORS = {
     text: palette.black,
     muted: '#3D3226',
     placeholder: '#6B5A38',
-    rule: 'rgba(15,13,14,0.16)',
+    rule: 'rgba(26,26,26,0.16)',
     margin: 'rgba(106,12,31,0.5)',
     accent: palette.burgundy,
     onAccent: palette.white,
@@ -114,7 +116,7 @@ export const NOTE_COLORS = {
     dark: true,
   },
   black: {
-    label: 'Black',
+    label: 'Charcoal',
     background: palette.black,
     text: palette.cream,
     muted: 'rgba(246,241,231,0.85)',

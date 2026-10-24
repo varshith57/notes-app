@@ -3,19 +3,12 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateTimeField } from '@/components/DateTimeField';
+import { Text, TextInput } from '@/components/Text';
 import { Chip, SectionLabel, Segmented, webHeaderLeft } from '@/components/ui';
 import {
   createTransaction,
@@ -34,8 +27,11 @@ import { CATEGORIES, findCategory } from '@/lib/categories';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
-import { centsToInput, parseMoneyToCents, todayISO } from '@/lib/format';
+import { centsToInput, formatAmountInput, parseMoneyToCents, todayISO } from '@/lib/format';
 import { colors, gradient, radius } from '@/lib/theme';
+
+/** Height of the Save bar while it sits on the keyboard, for keeping the caret clear of it. */
+const FOOTER_HEIGHT = 78;
 
 export default function TransactionEditorScreen() {
   const db = useSQLiteContext();
@@ -139,7 +135,7 @@ export default function TransactionEditorScreen() {
 
   const doSave = async () => {
     const cents = parseMoneyToCents(amount);
-    if (cents == null) return showMessage('Enter an amount', 'For example 1250 or 1250.50.');
+    if (cents == null) return showMessage('Enter an amount', 'For example 1,250 or 1,250.50.');
     if (!category) return showMessage('Pick a category');
 
     const input = { direction, amountCents: cents, category, subcategory, occurredOn, note: note.trim() };
@@ -177,11 +173,7 @@ export default function TransactionEditorScreen() {
   const builtIn = category ? (findCategory(direction, category)?.subcategories ?? []) : [];
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={insets.top + 44}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen
         options={{
           title: isNew ? 'New entry' : 'Edit entry',
@@ -194,7 +186,13 @@ export default function TransactionEditorScreen() {
             ) : null,
         }}
       />
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+      {/* Scrolls the field being typed in (and its caret) above the keyboard and the
+          Save button that rides on top of it. */}
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.form}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={FOOTER_HEIGHT + 16}
+      >
         <Segmented
           value={direction}
           onChange={switchDirection}
@@ -211,7 +209,7 @@ export default function TransactionEditorScreen() {
             placeholderTextColor={colors.grey}
             keyboardType="decimal-pad"
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={(text) => setAmount(formatAmountInput(text))}
             autoFocus={isNew}
           />
         </View>
@@ -310,16 +308,19 @@ export default function TransactionEditorScreen() {
           multiline
           textAlignVertical="top"
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <KeyboardStickyView
+        offset={{ opened: Math.max(insets.bottom, 16) - 16 }}
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}
+      >
         <Pressable onPress={save}>
           <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveButton}>
-            <Text style={styles.saveText}>{isNew ? 'Save entry' : 'Update entry'}</Text>
+            <Text style={styles.saveText}>{isNew ? 'Save' : 'Update'}</Text>
           </LinearGradient>
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardStickyView>
+    </View>
   );
 }
 
@@ -330,7 +331,8 @@ const styles = StyleSheet.create({
     fontSize: 44,
     fontWeight: '800',
     textAlign: 'center',
-    minWidth: 160,
+    // Full width: a web text field otherwise sizes itself to the font and can overflow.
+    alignSelf: 'stretch',
     fontVariant: ['tabular-nums'],
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
