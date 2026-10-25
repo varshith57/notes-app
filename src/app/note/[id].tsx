@@ -80,6 +80,12 @@ export default function NoteEditorScreen() {
   const LINE = Math.round(BASE_LINE * scale);
   /** Whole rows for a measured text height (tolerates sub-pixel rounding). */
   const rows = (h: number) => Math.max(1, Math.round(h / LINE));
+  // The text boxes must never be shorter than their text, not even by a pixel: on Android a
+  // multiline box that can scroll itself keeps every touch, so the page underneath won't
+  // scroll (the "frozen" editor). The title is clamped to its text height; the body gets a
+  // spare ruled line below the text.
+  const titleBoxHeight = Math.max(rows(titleHeight) * LINE, Math.ceil(titleHeight));
+  const bodyBoxHeight = Math.max(12 * LINE, (Math.ceil(bodyHeight / LINE - 0.05) + 1) * LINE);
   // Measured rule position on phones (see the hidden sample below); scaled default on web.
   const [measuredRule, setMeasuredRule] = useState<{ scale: number; y: number } | null>(null);
   const ruleInRow =
@@ -257,7 +263,7 @@ export default function NoteEditorScreen() {
             style={[
               styles.title,
               textSizes.title,
-              { color: tone.text, height: rows(titleHeight) * LINE },
+              { color: tone.text, height: titleBoxHeight },
             ]}
             placeholder="Title"
             placeholderTextColor={tone.placeholder}
@@ -277,7 +283,7 @@ export default function NoteEditorScreen() {
             style={[
               styles.body,
               textSizes.body,
-              { color: tone.text, height: Math.max(12 * LINE, rows(bodyHeight) * LINE) },
+              { color: tone.text, height: bodyBoxHeight },
             ]}
             placeholder="Start writing…"
             placeholderTextColor={tone.placeholder}

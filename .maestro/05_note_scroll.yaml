@@ -1,0 +1,60 @@
+# Long notes: the page scrolls up and down even when the swipe starts on the text, the
+# line being typed stays above the keyboard, and a reopened note scrolls too.
+appId: com.varshith.mynotes
+name: Long note scrolling
+---
+- runFlow: subflows/fresh_launch.yaml
+- tapOn: 'Notes'
+- tapOn: 'New note'
+- tapOn: 'Title'
+- inputText: 'Scroll test'
+- tapOn: 'Start writing…'
+
+# 25 lines: taller than the screen.
+- evalScript: ${output.line = 0}
+- repeat:
+    times: 25
+    commands:
+      - evalScript: ${output.line = output.line + 1}
+      - inputText: 'Line ${output.line} of a long note'
+      - pressKey: Enter
+
+# The newest line is visible above the keyboard while typing.
+- assertVisible: 'Line 25 of a long note'
+- hideKeyboard
+
+# Swipe down (starting on the text) back to the top.
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          start: 50%, 30%
+          end: 50%, 85%
+          duration: 500
+- assertVisible: 'Scroll test'
+- assertNotVisible: 'Line 25 of a long note'
+
+# And up to the end again.
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          start: 50%, 80%
+          end: 50%, 20%
+          duration: 500
+- assertVisible: 'Line 25 of a long note'
+
+# Reopened from the list, the note still scrolls.
+- runFlow: subflows/go_back.yaml
+- assertVisible: 'Scroll test'
+- tapOn: 'Scroll test'
+- assertVisible: 'Line 1 of a long note'
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          start: 50%, 80%
+          end: 50%, 20%
+          duration: 500
+- assertVisible: 'Line 25 of a long note'
+- runFlow: subflows/go_back.yaml

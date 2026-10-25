@@ -19,3 +19,5 @@ jobs:
         - .maestro/02_finance.yaml
         - .maestro/03_tasks.yaml
         - .maestro/04_navigation.yaml
+        - .maestro/05_note_scroll.yaml
+        - .maestro/06_budgets.yaml

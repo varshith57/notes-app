@@ -1,0 +1,43 @@
+# Budgets: create one, spend against it, see what's left on the entry, the Finances card,
+# Summary and the Budgets screen, then delete it.
+appId: com.varshith.mynotes
+name: Budgets
+---
+- runFlow: subflows/fresh_launch.yaml
+- tapOn: 'Finance'
+- assertVisible: 'Set a budget to see what’s left as you spend'
+
+# New budget from the header icon: 4,000 for Travel over the default month.
+- tapOn: 'Budgets'
+- assertVisible: 'No budgets running now'
+- tapOn: 'New budget'
+- tapOn: 'Budget amount'
+- inputText: '4000'
+- hideKeyboard
+- tapOn: 'Travel'
+- tapOn: 'Save'
+- assertVisible: 'Travel'
+- assertVisible: '4,000 left'
+- runFlow: subflows/go_back.yaml
+
+# Spend 3,000 on Travel today.
+- tapOn: 'Add financial note'
+- tapOn: '0'
+- inputText: '3000'
+- hideKeyboard
+- tapOn: 'Travel'
+- tapOn: 'Save'
+- assertVisible: '1,000 left'
+
+# Summary shows the budget's progress.
+- tapOn: 'Summary'
+- assertVisible: '75% used'
+- tapOn: 'All'
+
+# Delete it from the Budgets screen.
+- tapOn: 'Budgets'
+- tapOn: 'Travel budget.*'
+- tapOn: 'Delete budget'
+- assertVisible: 'Delete this budget\?'
+- tapOn: 'Delete'
+- assertVisible: 'No budgets running now'

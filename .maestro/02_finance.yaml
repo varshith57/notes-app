@@ -9,7 +9,7 @@ name: Finance
 
 # Validation message instead of a silent no-op.
 - tapOn: 'Add financial note'
-- tapOn: 'Save entry'
+- tapOn: 'Save'
 - assertVisible: 'Enter an amount'
 - tapOn: 'OK'
 
@@ -17,21 +17,21 @@ name: Finance
 - tapOn: '0'
 - inputText: '500'
 - hideKeyboard
-- tapOn: 'Food & Dining'
 - tapOn: 'Groceries'
-- tapOn: 'Save entry'
-- assertVisible: 'Groceries'
+- tapOn: 'Dairy & Eggs'
+- tapOn: 'Save'
+- assertVisible: 'Dairy & Eggs'
 - assertVisible: '.*500'
 - assertNotVisible: '.*500\.00'
 
 # Edit and update.
-- tapOn: 'Groceries'
-- assertVisible: 'Update entry'
+- tapOn: 'Dairy & Eggs'
+- assertVisible: 'Update'
 - tapOn: '500'
 - eraseText
 - inputText: '750'
 - hideKeyboard
-- tapOn: 'Update entry'
+- tapOn: 'Update'
 - assertVisible: '.*750'
 
 # Custom subcategory.
@@ -45,11 +45,11 @@ name: Finance
 - inputText: 'Logo design'
 - tapOn: 'Add subcategory'
 - assertVisible: 'Logo design'
-- tapOn: 'Save entry'
+- tapOn: 'Save'
 - assertVisible: '.*2,500\.50'
 
 # Unsaved changes: leaving via the phone's back asks first; Cancel keeps the edit open.
-- tapOn: 'Groceries'
+- tapOn: 'Dairy & Eggs'
 - tapOn: '750'
 - inputText: '1'
 - hideKeyboard
@@ -60,7 +60,7 @@ name: Finance
       visible: 'Discard changes\?'
     commands:
       - tapOn: 'Cancel'
-- assertVisible: 'Update entry'
+- assertVisible: 'Update'
 - runFlow: subflows/go_back.yaml
 - runFlow:
     when:
@@ -70,7 +70,7 @@ name: Finance
 # iOS fallback if the swipe was blocked: use the header back button.
 - runFlow:
     when:
-      visible: 'Update entry'
+      visible: 'Update'
     commands:
       - tapOn: 'Back'
       - tapOn: 'Discard'
@@ -82,24 +82,24 @@ name: Finance
 - assertVisible: 'SUMMARIZE BY'
 - tapOn: 'Quarter'
 - assertVisible: 'Q\d \d{4} · .*'
-- assertVisible: 'Groceries'
+- assertVisible: 'Dairy & Eggs'
 - tapOn: 'Summarize by Quarter'
 - tapOn: 'Year'
-- assertVisible: 'Groceries'
+- assertVisible: 'Dairy & Eggs'
 - tapOn: 'Summarize by Year'
 - tapOn: 'Custom'
-- assertVisible: 'FROM'
-- assertVisible: 'TO'
-- assertVisible: 'Groceries'
+# One field for the custom range, e.g. "1 Oct – 31 Oct 2026 · 31 days".
+- assertVisible: '\d+ days'
+- assertVisible: 'Dairy & Eggs'
 - tapOn: 'Summarize by Custom'
 - tapOn: 'Month'
 
 # Hold to select, add a second row, select all, bulk delete.
-- longPressOn: 'Groceries'
+- longPressOn: 'Dairy & Eggs'
 - assertVisible: '1 selected'
 - tapOn: 'Select all'
 - assertVisible: '2 selected'
 - tapOn: 'Delete 2 selected'
 - assertVisible: 'Delete 2 entries\?'
 - tapOn: 'Delete'
-- assertNotVisible: 'Groceries'
+- assertNotVisible: 'Dairy & Eggs'

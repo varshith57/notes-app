@@ -49,7 +49,7 @@ name: Navigation & gestures
 - tapOn: 'Add financial note'
 - tapOn: 'Optional details'
 - inputText: 'Typing with the keyboard open'
-- assertVisible: 'Save entry'
+- assertVisible: 'Save'
 - hideKeyboard
 - runFlow: subflows/go_back.yaml
 - runFlow:
