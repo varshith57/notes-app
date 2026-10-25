@@ -297,29 +297,43 @@ Without these IDs the app still works; Settings just says backup isn't set up.
 
 ## Part D — End-to-end tests on real phone builds
 
-[.maestro/](.maestro/) holds Maestro flows that drive the real app on a phone: notes, finance, tasks, plus the phone's own navigation (iOS edge-swipe back, Android back button, back cancelling a multi-select, keyboard covering Save, backgrounding the app). They use a separate `e2e-test` build profile (iOS simulator build + Android APK, no signing needed).
+[.maestro/](.maestro/) holds Maestro flows that drive the real app: notes, finance, tasks, budgets, scrolling a long note, and the phone's own navigation (iOS edge-swipe back, Android back button, back cancelling a multi-select, keyboard covering Save, backgrounding the app). Every flow starts with `clearState`, so **never run them on a phone whose notes you want to keep**.
 
-**Run them in the cloud (no Xcode or Android Studio needed):**
+**Locally on an Android emulator (free; how they're run today).** One-time setup on a Mac:
 
 ```bash
-npx eas-cli@latest workflow:run .eas/workflows/e2e-android.yml
+brew install --cask android-platform-tools android-commandlinetools
 ```
 
 ```bash
-npx eas-cli@latest workflow:run .eas/workflows/e2e-ios.yml
-```
-
-Each builds the app, boots an emulator/simulator on EAS, runs all four flows and shows pass/fail with screenshots in the expo.dev dashboard.
-
-**Or locally** on a connected phone, emulator or simulator with the `e2e-test` build installed:
-
-```bash
-curl -fsSL "https://get.maestro.mobile.dev" | bash
+brew install openjdk@17 mobile-dev-inc/tap/maestro
 ```
 
 ```bash
-maestro test .maestro/
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17 ANDROID_HOME=/opt/homebrew/share/android-commandlinetools && yes | sdkmanager --licenses && sdkmanager "emulator" "platforms;android-35" "system-images;android-35;google_apis;arm64-v8a" && avdmanager create avd -n notes_test -k "system-images;android-35;google_apis;arm64-v8a" -d pixel_7
 ```
+
+Then, each time:
+
+```bash
+/opt/homebrew/share/android-commandlinetools/emulator/emulator -avd notes_test -no-snapshot -no-audio
+```
+
+```bash
+adb shell settings put secure stylus_handwriting_enabled 0
+```
+
+```bash
+adb install -r path/to/preview.apk
+```
+
+```bash
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 maestro test .maestro/
+```
+
+Turning off stylus handwriting matters: otherwise the emulator treats Maestro's typing as a stylus and shows Gboard's stylus toolbar instead of the keyboard, which changes how Back behaves. The preview APK is arm64-only, which suits Apple Silicon emulators.
+
+**In the cloud (needs a paid Expo plan for the Maestro jobs):** `npx eas-cli@latest workflow:run .eas/workflows/e2e-android.yml` (or `e2e-ios.yml`) builds the app, boots an emulator/simulator on EAS and runs all six flows.
 
 Run them before every store submission.
 
