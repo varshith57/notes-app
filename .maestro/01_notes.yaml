@@ -24,8 +24,10 @@ name: Notes
 - runFlow: subflows/go_back.yaml
 - assertVisible: 'Maestro note'
 
-# A blank note is discarded when you leave it.
+# A blank note is discarded when you leave it. (A new note opens with the keyboard up;
+# on Android the first Back only closes the keyboard.)
 - tapOn: 'New note'
+- hideKeyboard
 - runFlow: subflows/go_back.yaml
 - assertVisible: '1 note'
 

@@ -18,6 +18,8 @@ name: Finance
 - inputText: '500'
 - hideKeyboard
 - tapOn: 'Groceries'
+- scrollUntilVisible:
+    element: 'Dairy & Eggs'
 - tapOn: 'Dairy & Eggs'
 - tapOn: 'Save'
 - assertVisible: 'Dairy & Eggs'
@@ -41,6 +43,8 @@ name: Finance
 - inputText: '2500.50'
 - hideKeyboard
 - tapOn: 'Freelance'
+- scrollUntilVisible:
+    element: '\+ Custom'
 - tapOn: '\+ Custom'
 - inputText: 'Logo design'
 - tapOn: 'Add subcategory'

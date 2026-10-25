@@ -11,6 +11,7 @@ name: Navigation & gestures
 - tapOn: 'Home'
 - tapOn: 'New Note'
 - assertVisible: 'Start writing…'
+- hideKeyboard
 - runFlow: subflows/go_back.yaml
 - assertVisible: 'My Space'
 
@@ -47,6 +48,8 @@ name: Navigation & gestures
 # Keyboard open: the Save button stays reachable above it.
 - tapOn: 'Finance'
 - tapOn: 'Add financial note'
+- scrollUntilVisible:
+    element: 'Optional details'
 - tapOn: 'Optional details'
 - inputText: 'Typing with the keyboard open'
 - assertVisible: 'Save'

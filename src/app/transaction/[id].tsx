@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ import {
 } from '@/db/subcategoriesRepo';
 import type { Direction } from '@/db/types';
 import { CATEGORIES, findCategory } from '@/lib/categories';
+import { useStableCallback } from '@/hooks/useStableCallback';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
@@ -167,6 +168,24 @@ export default function TransactionEditorScreen() {
     leaveTo('/finance');
   };
 
+  // Built once per entry so the header isn't re-mounted while the screen closes.
+  const onDelete = useStableCallback(confirmDelete);
+  const headerOptions = useMemo(
+    () => ({
+      title: isNew ? 'New entry' : 'Edit entry',
+      headerLeft: webHeaderLeft('/finance'),
+      headerRight:
+        txId != null
+          ? () => (
+              <Pressable onPress={onDelete} hitSlop={8} accessibilityLabel="Delete entry">
+                <Feather name="trash-2" size={21} color={colors.muted} />
+              </Pressable>
+            )
+          : undefined,
+    }),
+    [isNew, txId, onDelete],
+  );
+
   if (!loaded) return null;
 
   const accent = direction === 'income' ? colors.income : colors.expense;
@@ -174,18 +193,7 @@ export default function TransactionEditorScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Stack.Screen
-        options={{
-          title: isNew ? 'New entry' : 'Edit entry',
-          headerLeft: webHeaderLeft('/finance'),
-          headerRight: () =>
-            txId != null ? (
-              <Pressable onPress={confirmDelete} hitSlop={8} accessibilityLabel="Delete entry">
-                <Feather name="trash-2" size={21} color={colors.muted} />
-              </Pressable>
-            ) : null,
-        }}
-      />
+      <Stack.Screen options={headerOptions} />
       {/* Scrolls the field being typed in (and its caret) above the keyboard and the
           Save button that rides on top of it. */}
       <KeyboardAwareScrollView

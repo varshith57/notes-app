@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { Text, TextInput } from '@/components/Text';
 import { Chip, SectionLabel, webHeaderLeft } from '@/components/ui';
 import { createBudget, deleteBudget, getBudget, updateBudget } from '@/db/budgetsRepo';
 import { listCustomSubcategories, type CustomSubcategory } from '@/db/subcategoriesRepo';
+import { useStableCallback } from '@/hooks/useStableCallback';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { CATEGORIES, findCategory } from '@/lib/categories';
 import { emitDataChanged } from '@/lib/dataEvents';
@@ -131,6 +132,24 @@ export default function BudgetEditorScreen() {
     leaveTo('/finance');
   };
 
+  // Built once per budget so the header isn't re-mounted while the screen closes.
+  const onDelete = useStableCallback(confirmDelete);
+  const headerOptions = useMemo(
+    () => ({
+      title: isNew ? 'New budget' : 'Edit budget',
+      headerLeft: webHeaderLeft('/finance'),
+      headerRight:
+        budgetId != null
+          ? () => (
+              <Pressable onPress={onDelete} hitSlop={8} accessibilityLabel="Delete budget">
+                <Feather name="trash-2" size={21} color={colors.muted} />
+              </Pressable>
+            )
+          : undefined,
+    }),
+    [isNew, budgetId, onDelete],
+  );
+
   if (!loaded) return null;
 
   const builtIn = category ? (findCategory('expense', category)?.subcategories ?? []) : [];
@@ -138,18 +157,7 @@ export default function BudgetEditorScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Stack.Screen
-        options={{
-          title: isNew ? 'New budget' : 'Edit budget',
-          headerLeft: webHeaderLeft('/finance'),
-          headerRight: () =>
-            budgetId != null ? (
-              <Pressable onPress={confirmDelete} hitSlop={8} accessibilityLabel="Delete budget">
-                <Feather name="trash-2" size={21} color={colors.muted} />
-              </Pressable>
-            ) : null,
-        }}
-      />
+      <Stack.Screen options={headerOptions} />
       <KeyboardAwareScrollView
         contentContainerStyle={styles.form}
         keyboardShouldPersistTaps="handled"

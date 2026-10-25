@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 // The paper's own text scales with the ruled-line grid below, so it uses React Native's
 // Text / TextInput directly rather than the app's auto-scaled ones.
 import {
@@ -20,6 +20,7 @@ import { Text } from '@/components/Text';
 import { webHeaderLeft } from '@/components/ui';
 import { createNote, deleteNote, getNote, updateNote } from '@/db/notesRepo';
 import type { NoteInput } from '@/db/types';
+import { useStableCallback } from '@/hooks/useStableCallback';
 import { emitDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive, leaveTo } from '@/lib/dialogs';
 import { formatTimestamp } from '@/lib/format';
@@ -195,35 +196,41 @@ export default function NoteEditorScreen() {
   };
 
   const tone = noteTone(color);
+  // Rebuilt only when the paper colour or Delete availability changes, so the header isn't
+  // re-mounted while the screen closes.
+  const onDelete = useStableCallback(confirmDelete);
+  const onSave = useStableCallback(saveAndClose);
+  const headerOptions = useMemo(
+    () => ({
+      headerStyle: { backgroundColor: tone.background },
+      headerTintColor: tone.text,
+      headerLeft: webHeaderLeft('/notes', tone.text),
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          {exists && (
+            <Pressable onPress={onDelete} hitSlop={8} accessibilityLabel="Delete note">
+              <Feather name="trash-2" size={21} color={tone.muted} />
+            </Pressable>
+          )}
+          <Pressable
+            onPress={onSave}
+            style={[styles.saveButton, { backgroundColor: tone.accent }]}
+            accessibilityRole="button"
+            accessibilityLabel="Save note"
+          >
+            <Text style={[styles.saveText, { color: tone.onAccent }]}>Save</Text>
+          </Pressable>
+        </View>
+      ),
+    }),
+    [tone, exists, onDelete, onSave],
+  );
   if (!loaded) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: tone.background }]}>
       <StatusBar style={tone.dark ? 'light' : 'dark'} />
-      <Stack.Screen
-        options={{
-          headerStyle: { backgroundColor: tone.background },
-          headerTintColor: tone.text,
-          headerLeft: webHeaderLeft('/notes', tone.text),
-          headerRight: () => (
-            <View style={styles.headerActions}>
-              {exists && (
-                <Pressable onPress={confirmDelete} hitSlop={8} accessibilityLabel="Delete note">
-                  <Feather name="trash-2" size={21} color={tone.muted} />
-                </Pressable>
-              )}
-              <Pressable
-                onPress={saveAndClose}
-                style={[styles.saveButton, { backgroundColor: tone.accent }]}
-                accessibilityRole="button"
-                accessibilityLabel="Save note"
-              >
-                <Text style={[styles.saveText, { color: tone.onAccent }]}>Save</Text>
-              </Pressable>
-            </View>
-          ),
-        }}
-      />
+      <Stack.Screen options={headerOptions} />
       {/* Follows the caret while typing so the line being written stays above the keyboard
           and the colour bar on top of it; the extra keyboard space keeps the whole note
           scrollable while the keyboard is open. */}

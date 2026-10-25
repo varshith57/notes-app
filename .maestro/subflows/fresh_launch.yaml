@@ -5,4 +5,10 @@ appId: com.varshith.mynotes
     clearState: true
     permissions:
       notifications: allow
+# Builds with Google backup set up open the sign-in prompt on first launch.
+- runFlow:
+    when:
+      visible: 'Skip for now'
+    commands:
+      - tapOn: 'Skip for now'
 - assertVisible: 'My Space'

@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { Text, TextInput } from '@/components/Text';
 import { Chip, SectionLabel, webHeaderLeft } from '@/components/ui';
 import { getTask } from '@/db/tasksRepo';
 import type { Priority, Task } from '@/db/types';
+import { useStableCallback } from '@/hooks/useStableCallback';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
@@ -146,24 +147,31 @@ export default function TaskEditorScreen() {
     leaveTo('/tasks');
   };
 
+  // Built once per task so the header isn't re-mounted while the screen closes.
+  const onDelete = useStableCallback(confirmDelete);
+  const canDelete = existing != null;
+  const headerOptions = useMemo(
+    () => ({
+      title: isNew ? 'New task' : 'Edit task',
+      headerLeft: webHeaderLeft('/tasks'),
+      headerRight: canDelete
+        ? () => (
+            <Pressable onPress={onDelete} hitSlop={8} accessibilityLabel="Delete task">
+              <Feather name="trash-2" size={21} color={colors.muted} />
+            </Pressable>
+          )
+        : undefined,
+    }),
+    [isNew, canDelete, onDelete],
+  );
+
   if (!loaded) return null;
 
   const canRemind = dueOn != null && dueTime != null && reminders.enabled;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Stack.Screen
-        options={{
-          title: isNew ? 'New task' : 'Edit task',
-          headerLeft: webHeaderLeft('/tasks'),
-          headerRight: () =>
-            existing ? (
-              <Pressable onPress={confirmDelete} hitSlop={8} accessibilityLabel="Delete task">
-                <Feather name="trash-2" size={21} color={colors.muted} />
-              </Pressable>
-            ) : null,
-        }}
-      />
+      <Stack.Screen options={headerOptions} />
       {/* Scrolls the field being typed in (and its caret) above the keyboard and the
           Save button that rides on top of it. */}
       <KeyboardAwareScrollView

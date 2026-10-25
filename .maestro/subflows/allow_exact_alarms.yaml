@@ -1,0 +1,10 @@
+# First reminder on Android 12+: the app explains, then opens the system's
+# "Alarms & reminders" screen. Come back without changing it (reminders still work).
+appId: com.varshith.mynotes
+---
+- runFlow:
+    when:
+      visible: 'Let reminders ring on time'
+    commands:
+      - tapOn: 'OK'
+      - back

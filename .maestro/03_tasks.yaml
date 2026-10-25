@@ -36,6 +36,7 @@ name: Tasks
 - hideKeyboard
 - assertVisible: 'You’ll get a notification at this time.'
 - tapOn: 'Save'
+- runFlow: subflows/allow_exact_alarms.yaml
 - assertVisible: 'Maestro meeting'
 - tapOn: 'Reminders'
 - assertVisible: 'Maestro meeting'

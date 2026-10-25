@@ -113,6 +113,10 @@ export function Segmented<T extends string>({
             key={o.value}
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && styles.segmentSelected]}
+            // Stable id for end-to-end tests (labels can repeat elsewhere on screen).
+            testID={`segment-${o.value}`}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
           >
             {o.icon && (
               <Feather name={o.icon} size={15} color={selected ? colors.primary : colors.muted} />
