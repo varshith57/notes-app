@@ -18,7 +18,7 @@ export function useUnsavedChangesGuard(dirty: boolean, what: string) {
     );
     if (discard) {
       allowRef.current();
-      repeat();
+      afterHeaderSettles(repeat);
     }
   });
   useEffect(() => {
@@ -27,9 +27,15 @@ export function useUnsavedChangesGuard(dirty: boolean, what: string) {
 
   // Lifting the guard re-renders the screen and updates its native header. Navigating in the
   // same frame lets Android remove the header while that update is still being applied,
-  // which crashes ("The specified child already has a parent"), so wait two frames first.
+  // which crashes ("The specified child already has a parent"), so both ways out (Discard,
+  // and leaving after a save or delete) wait two frames first.
   return useCallback((fallback: Href) => {
     allowRef.current();
-    requestAnimationFrame(() => requestAnimationFrame(() => leaveTo(fallback)));
+    afterHeaderSettles(() => leaveTo(fallback));
   }, []);
+}
+
+/** Runs `fn` two frames from now, after the re-render from lifting the guard is applied. */
+function afterHeaderSettles(fn: () => void) {
+  requestAnimationFrame(() => requestAnimationFrame(fn));
 }
