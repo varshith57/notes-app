@@ -16,7 +16,7 @@ import { useStableCallback } from '@/hooks/useStableCallback';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { emitDataChanged } from '@/lib/dataEvents';
 import { confirmDestructive, leaveTo, showMessage } from '@/lib/dialogs';
-import { toHHMM, toISODate } from '@/lib/format';
+import { todayISO, toHHMM, toISODate } from '@/lib/format';
 import { useReminderPrefs } from '@/lib/reminderPrefs';
 import type { ScheduleError } from '@/lib/reminders';
 import { removeTask, saveTask } from '@/lib/taskActions';
@@ -58,9 +58,13 @@ export default function TaskEditorScreen() {
   const [existing, setExisting] = useState<Task | null>(null);
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
-  const [dueOn, setDueOn] = useState<string | null>(
-    params.date ?? (timed ? nextHourSlot().date : null),
-  );
+  // Adding from Agenda on today's date late at night: the next hour is tomorrow, so the
+  // date moves with it (otherwise "today, 12:00 AM" is already past and won't remind).
+  const [dueOn, setDueOn] = useState<string | null>(() => {
+    if (!timed) return params.date ?? null;
+    const slot = nextHourSlot();
+    return params.date && params.date !== todayISO() ? params.date : slot.date;
+  });
   const [dueTime, setDueTime] = useState<string | null>(timed ? nextHourSlot().time : null);
   const [endTime, setEndTime] = useState<string | null>(null);
   // On by default: it only takes effect once the task has a date and a time.

@@ -37,7 +37,12 @@ name: Tasks
 - assertVisible: 'You’ll get a notification at this time.'
 - tapOn: 'Save'
 - runFlow: subflows/allow_exact_alarms.yaml
-- assertVisible: 'Maestro meeting'
+# Default slot is the next hour; after 11 pm that's tomorrow, so it's not on today's agenda.
+- runFlow:
+    when:
+      true: ${new Date().getHours() < 23}
+    commands:
+      - assertVisible: 'Maestro meeting'
 - tapOn: 'Reminders'
 - assertVisible: 'Maestro meeting'
 - tapOn: 'To-do'
@@ -49,8 +54,12 @@ name: Tasks
 - tapOn: 'Update'
 - tapOn: 'Reminders'
 - assertNotVisible: 'Maestro meeting'
-- tapOn: 'Agenda'
-- assertVisible: 'Maestro meeting'
+- runFlow:
+    when:
+      true: ${new Date().getHours() < 23}
+    commands:
+      - tapOn: 'Agenda'
+      - assertVisible: 'Maestro meeting'
 
 # Bulk delete from the To-do view removes them everywhere.
 - tapOn: 'To-do'
