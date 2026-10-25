@@ -1,12 +1,12 @@
-import { usePreventRemove } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { usePreventRemove, type Href } from 'expo-router';
+import { useCallback, useEffect, useRef } from 'react';
 
-import { confirmDestructive } from '@/lib/dialogs';
+import { confirmDestructive, leaveTo } from '@/lib/dialogs';
 
 /**
  * Asks before leaving an editor with unsaved edits — via the header back arrow, the iOS
- * swipe-back gesture or the Android back button/gesture alike. Returns `allowLeave`, which
- * screens call right before navigating away on purpose (after saving or deleting).
+ * swipe-back gesture or the Android back button/gesture alike. Returns `leave`, which
+ * screens call to navigate away on purpose (after saving or deleting).
  */
 export function useUnsavedChangesGuard(dirty: boolean, what: string) {
   const allowRef = useRef<() => void>(() => {});
@@ -24,5 +24,12 @@ export function useUnsavedChangesGuard(dirty: boolean, what: string) {
   useEffect(() => {
     allowRef.current = allowLeave;
   }, [allowLeave]);
-  return allowLeave;
+
+  // Lifting the guard re-renders the screen and updates its native header. Navigating in the
+  // same frame lets Android remove the header while that update is still being applied,
+  // which crashes ("The specified child already has a parent"), so wait two frames first.
+  return useCallback((fallback: Href) => {
+    allowRef.current();
+    requestAnimationFrame(() => requestAnimationFrame(() => leaveTo(fallback)));
+  }, []);
 }

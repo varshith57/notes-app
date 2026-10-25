@@ -60,7 +60,7 @@ export default function BudgetEditorScreen() {
 
   const form = JSON.stringify([category, subcategory, amount, from, to]);
   const [pristine, setPristine] = useState<string | null>(isNew ? form : null);
-  const allowLeave = useUnsavedChangesGuard(
+  const leave = useUnsavedChangesGuard(
     loaded && pristine !== null && form !== pristine,
     'this budget',
   );
@@ -105,8 +105,8 @@ export default function BudgetEditorScreen() {
     if (budgetId == null) await createBudget(db, input);
     else await updateBudget(db, budgetId, input);
     emitDataChanged('finance');
-    allowLeave();
-    leaveTo('/finance');
+    leave('/finance');
+    return true;
   };
 
   // Ignore repeat taps while a save is in flight, so one budget can't be stored twice.
@@ -115,9 +115,11 @@ export default function BudgetEditorScreen() {
     if (busy.current) return;
     busy.current = true;
     try {
-      await doSave();
-    } finally {
+      // Stays locked once saved: the screen closes a moment later.
+      if (!(await doSave())) busy.current = false;
+    } catch (e) {
       busy.current = false;
+      throw e;
     }
   };
 
@@ -128,8 +130,7 @@ export default function BudgetEditorScreen() {
     }
     await deleteBudget(db, budgetId);
     emitDataChanged('finance');
-    allowLeave();
-    leaveTo('/finance');
+    leave('/finance');
   };
 
   // Built once per budget so the header isn't re-mounted while the screen closes.

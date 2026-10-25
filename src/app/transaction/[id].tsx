@@ -55,7 +55,7 @@ export default function TransactionEditorScreen() {
   // Unsaved-changes guard: compare the form with what was loaded (or the blank form).
   const form = JSON.stringify([direction, amount, category, subcategory, occurredOn, note]);
   const [pristine, setPristine] = useState<string | null>(isNew ? form : null);
-  const allowLeave = useUnsavedChangesGuard(
+  const leave = useUnsavedChangesGuard(
     loaded && pristine !== null && form !== pristine,
     'this entry',
   );
@@ -143,8 +143,8 @@ export default function TransactionEditorScreen() {
     if (txId == null) await createTransaction(db, input);
     else await updateTransaction(db, txId, input);
     emitDataChanged('finance');
-    allowLeave();
-    leaveTo('/finance');
+    leave('/finance');
+    return true;
   };
 
   // Ignore repeat taps while a save is in flight, so one entry can't be stored twice.
@@ -153,9 +153,11 @@ export default function TransactionEditorScreen() {
     if (busy.current) return;
     busy.current = true;
     try {
-      await doSave();
-    } finally {
+      // Stays locked once saved: the screen closes a moment later.
+      if (!(await doSave())) busy.current = false;
+    } catch (e) {
       busy.current = false;
+      throw e;
     }
   };
 
@@ -164,8 +166,7 @@ export default function TransactionEditorScreen() {
     if (!(await confirmDestructive('Delete this entry?', 'This cannot be undone.'))) return;
     await deleteTransaction(db, txId);
     emitDataChanged('finance');
-    allowLeave();
-    leaveTo('/finance');
+    leave('/finance');
   };
 
   // Built once per entry so the header isn't re-mounted while the screen closes.

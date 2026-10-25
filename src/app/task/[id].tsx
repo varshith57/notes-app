@@ -70,7 +70,7 @@ export default function TaskEditorScreen() {
   // Unsaved-changes guard: compare the form with what was loaded (or the blank form).
   const form = JSON.stringify([title, details, dueOn, dueTime, endTime, remind, priority]);
   const [pristine, setPristine] = useState<string | null>(isNew ? form : null);
-  const allowLeave = useUnsavedChangesGuard(
+  const leave = useUnsavedChangesGuard(
     loaded && pristine !== null && form !== pristine,
     'this task',
   );
@@ -122,8 +122,8 @@ export default function TaskEditorScreen() {
     if (result && 'error' in result) {
       await showMessage('Saved without an alert', REMINDER_ERRORS[result.error]);
     }
-    allowLeave();
-    leaveTo('/tasks');
+    leave('/tasks');
+    return true;
   };
 
   // Ignore repeat taps while a save is in flight, so one entry can't be stored twice.
@@ -132,9 +132,11 @@ export default function TaskEditorScreen() {
     if (busy.current) return;
     busy.current = true;
     try {
-      await doSave();
-    } finally {
+      // Stays locked once saved: the screen closes a moment later.
+      if (!(await doSave())) busy.current = false;
+    } catch (e) {
       busy.current = false;
+      throw e;
     }
   };
 
@@ -143,8 +145,7 @@ export default function TaskEditorScreen() {
     if (!(await confirmDestructive('Delete this task?', 'This cannot be undone.'))) return;
     await removeTask(db, existing);
     emitDataChanged('tasks');
-    allowLeave();
-    leaveTo('/tasks');
+    leave('/tasks');
   };
 
   // Built once per task so the header isn't re-mounted while the screen closes.
