@@ -30,7 +30,6 @@ name: Finance
 - tapOn: 'Dairy & Eggs'
 - assertVisible: 'Update'
 - tapOn: '500'
-- eraseText
 - inputText: '750'
 - hideKeyboard
 - tapOn: 'Update'

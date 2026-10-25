@@ -219,6 +219,9 @@ export default function TransactionEditorScreen() {
             value={amount}
             onChangeText={(text) => setAmount(formatAmountInput(text))}
             autoFocus={isNew}
+            // Tapping an existing amount selects it, so typing replaces it rather than
+            // mixing new digits into the old ones.
+            selectTextOnFocus
           />
         </View>
 

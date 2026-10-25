@@ -173,6 +173,9 @@ export default function BudgetEditorScreen() {
             value={amount}
             onChangeText={(text) => setAmount(formatAmountInput(text))}
             autoFocus={isNew && params.category != null}
+            // Tapping an existing amount selects it, so typing replaces it rather than
+            // mixing new digits into the old ones.
+            selectTextOnFocus
             accessibilityLabel="Budget amount"
           />
         </View>
